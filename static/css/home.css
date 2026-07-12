@@ -1,0 +1,21 @@
+.hero {
+    min-height: 100vh;
+    background:
+        linear-gradient(rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.55));
+    background-position: center;
+    background-size: cover;
+    background-repeat: no-repeat;
+}
+
+.hero h1 {
+    font-size: 4rem;
+}
+
+.hero p {
+    max-width: 700px;
+    margin: 0 auto 2rem;
+}
+
+.hero .btn {
+    padding: 0.75rem 2rem;
+}

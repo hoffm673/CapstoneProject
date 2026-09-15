@@ -28,6 +28,10 @@ INSTALLED_APPS = [
     'main',
 ]
 
+# Use our extended Django User model for authentication
+# Just adds user_major to the Django user feature
+AUTH_USER_MODEL = 'main.User'
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',

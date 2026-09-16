@@ -1,0 +1,96 @@
+
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+
+<div class="container d-flex justify-content-center align-items-center min-vh-100">
+
+    <div class="card shadow p-4" style="width: 100%; max-width: 450px;">
+
+        <h2 class="text-center mb-4">Create an Account</h2>
+
+        {% if error %}
+            <div class="alert alert-danger">
+                {{ error }}
+            </div>
+        {% endif %}
+
+        <form method="POST">
+
+            {% csrf_token %}
+
+            <div class="mb-3">
+                <label for="username" class="form-label">
+                    Username
+                </label>
+
+                <input
+                    type="text"
+                    class="form-control"
+                    id="username"
+                    name="username"
+                    required
+                >
+            </div>
+
+            <div class="mb-3">
+                <label for="email" class="form-label">
+                    Email
+                </label>
+
+                <input
+                    type="email"
+                    class="form-control"
+                    id="email"
+                    name="email"
+                    required
+                >
+            </div>
+
+            <div class="mb-3">
+                <label for="password" class="form-label">
+                    Password
+                </label>
+
+                <input
+                    type="password"
+                    class="form-control"
+                    id="password"
+                    name="password"
+                    required
+                >
+            </div>
+
+            <div class="mb-3">
+                <label for="password_confirm" class="form-label">
+                    Confirm Password
+                </label>
+
+                <input
+                    type="password"
+                    class="form-control"
+                    id="password_confirm"
+                    name="password_confirm"
+                    required
+                >
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100">
+                Register
+            </button>
+
+        </form>
+
+        <div class="text-center mt-3">
+            <p>
+                Already have an account?
+                <a href="{% url 'login' %}">Login</a>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

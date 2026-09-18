@@ -1,18 +1,93 @@
-
 {% extends "base.html" %}
 {% load static %}
-<!DOCTYPE html>
+
+{% block title %}Submit A Review{% endblock %}
+
 {% block content %}
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Submit A Review</title>
-</head>
-<body>
 
-    <h1>Submit A Review Page</h1>
-    <p>This is where users will submit reviews</p>
+<div class="container d-flex justify-content-center align-items-center min-vh-100">
 
-</body>
-</html>
+    <div class="card shadow p-4" style="width: 100%; max-width: 600px;">
+
+        <h2 class="text-center mb-4">Submit A Review</h2>
+
+        {% if error %}
+            <div class="alert alert-danger">
+                {{ error }}
+            </div>
+        {% endif %}
+
+        {% if success %}
+            <div class="alert alert-success">
+                {{ success }}
+            </div>
+        {% endif %}
+
+        <form method="POST">
+            {% csrf_token %}
+
+            <div class="mb-3">
+                <label for="course" class="form-label">Course</label>
+                <select class="form-select" id="course" name="course" required>
+                    <option value="" selected disabled>Select a course</option>
+                    {% for course in courses %}
+                        <option value="{{ course.id }}">{{ course.course_code }} - {{ course.course_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label for="professor" class="form-label">Professor</label>
+                <select class="form-select" id="professor" name="professor" required>
+                    <option value="" selected disabled>Select a professor</option>
+                    {% for professor in professors %}
+                        <option value="{{ professor.id }}">{{ professor.professor_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col">
+                    <label for="difficulty_score" class="form-label">Difficulty (1-5)</label>
+                    <select class="form-select" id="difficulty_score" name="difficulty_score" required>
+                        <option value="" selected disabled>Rate it</option>
+                        {% for i in "12345" %}
+                            <option value="{{ i }}">{{ i }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col">
+                    <label for="time_score" class="form-label">Time Commitment (1-5)</label>
+                    <select class="form-select" id="time_score" name="time_score" required>
+                        <option value="" selected disabled>Rate it</option>
+                        {% for i in "12345" %}
+                            <option value="{{ i }}">{{ i }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label for="review_text" class="form-label">Your Review</label>
+                <textarea
+                    class="form-control"
+                    id="review_text"
+                    name="review_text"
+                    rows="5"
+                    placeholder="What was the course like? Any tips for future students?"
+                    required
+                ></textarea>
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100">
+                Submit Review
+            </button>
+
+        </form>
+
+    </div>
+
+</div>
+
 {% endblock %}

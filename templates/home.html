@@ -23,34 +23,29 @@
 
 <div class="flex-container">
     <div class="container text-center pt-3">
-    <h1></h1>
         <div class="container">
+            <h1 class="text-start">Recent Reviews</h1>
 
-             <h1 class="text-start">Recent Reviews</h1>
-            <div class="card mb-4">
-  <div class="card-header">
-    Quote
-  </div>
-  <div class="card-body">
-    <blockquote class="blockquote mb-0">
-      <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer posuere erat a ante.</p>
-      <footer class="blockquote-footer">Someone famous in <cite title="Source Title">Source Title</cite></footer>
-    </blockquote>
-  </div>
-</div>
-            <div class="card mb-4">
-  <div class="card-header">
-    Quote
-  </div>
-  <div class="card-body">
-    <blockquote class="blockquote mb-0">
-      <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer posuere erat a ante.</p>
-      <footer class="blockquote-footer">Someone famous in <cite title="Source Title">Source Title</cite></footer>
-    </blockquote>
-  </div>
-</div>
+            {% for review in recent_reviews %}
+                <div class="card mb-4 text-start">
+                    <div class="card-header">
+                        {{ review.review_course.course_code }} - {{ review.review_course.course_name }}
+                    </div>
+                    <div class="card-body">
+                        <blockquote class="blockquote mb-0">
+                            <p>{{ review.review_text }}</p>
+                            <footer class="blockquote-footer">
+                                {{ review.review_user.username }} talking about <cite title="Professor">{{ review.review_professor.professor_name }}
+                            </footer>
+                        </blockquote>
+                    </div>
+                </div>
+            {% empty %}
+                <p class="text-start">No reviews yet.</p>
+            {% endfor %}
+
         </div>
-</div>
+    </div>
 </div>
 
 {% endblock %}

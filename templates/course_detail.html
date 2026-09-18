@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block title %}{{ course.course_code }}{% endblock %}
+
+{% block content %}
+
+<div class="mb-4">
+    <a href="{% url 'search' %}" class="btn btn-outline-secondary btn-sm">
+        Back to courses
+    </a>
+</div>
+
+<section class="mb-4">
+    <div class="d-flex flex-column flex-md-row justify-content-between gap-3">
+        <div>
+            <p class="text-muted mb-1">{{ course.course_code }}</p>
+            <h1 class="mb-2">{{ course.course_name }}</h1>
+            <p class="mb-0">
+                {{ course.course_credits }} credit{{ course.course_credits|pluralize }}
+            </p>
+        </div>
+
+        <div class="text-md-end">
+            <p class="text-muted mb-1">Professors</p>
+            <p class="mb-0">
+                {% for professor in course.course_professors.all %}
+                    {{ professor.professor_name }}{% if not forloop.last %}, {% endif %}
+                {% empty %}
+                    No professor listed
+                {% endfor %}
+            </p>
+        </div>
+    </div>
+</section>
+
+<section class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="border rounded p-3 h-100">
+            <p class="text-muted mb-1">Reviews</p>
+            <h2 class="h4 mb-0">{{ review_stats.review_count }}</h2>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="border rounded p-3 h-100">
+            <p class="text-muted mb-1">Avg difficulty</p>
+            <h2 class="h4 mb-0">
+                {% if review_stats.average_difficulty %}
+                    {{ review_stats.average_difficulty|floatformat:1 }} / 5
+                {% else %}
+                    No data
+                {% endif %}
+            </h2>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="border rounded p-3 h-100">
+            <p class="text-muted mb-1">Avg time score</p>
+            <h2 class="h4 mb-0">
+                {% if review_stats.average_time %}
+                    {{ review_stats.average_time|floatformat:1 }} / 5
+                {% else %}
+                    No data
+                {% endif %}
+            </h2>
+        </div>
+    </div>
+</section>
+
+<section>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="h3 mb-0">Course Reviews</h2>
+        <a href="{% url 'review' %}" class="btn btn-primary btn-sm">Leave a review</a>
+    </div>
+
+    {% for review in reviews %}
+        <article class="card mb-3">
+            <div class="card-body">
+                <div class="d-flex flex-column flex-md-row justify-content-between gap-2 mb-2">
+                    <div>
+                        <h3 class="h5 mb-1">{{ review.review_professor.professor_name }}</h3>
+                        <p class="text-muted mb-0">
+                            {{ review.review_user.username }}{% if review.review_user.user_major %}, {{ review.review_user.user_major.major_name }}{% endif %}
+                        </p>
+                    </div>
+                    <p class="text-muted mb-0">{{ review.review_date }}</p>
+                </div>
+
+                <div class="d-flex flex-wrap gap-2 mb-3">
+                    <span class="badge bg-secondary">Difficulty {{ review.difficulty_score }}/5</span>
+                    <span class="badge bg-secondary">Time {{ review.time_score }}/5</span>
+                </div>
+
+                <p class="mb-0">{{ review.review_text }}</p>
+            </div>
+        </article>
+    {% empty %}
+        <p class="text-muted">No reviews have been posted for this course yet.</p>
+    {% endfor %}
+</section>
+
+{% endblock %}

@@ -1,10 +1,15 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login
+from django.db.models import Avg, Count
 from .models import User
 from .models import Review
+from .models import Course, Professor
+
 
 def home(request):
-    # Fetch the 2 most recent reviews, ordered by date and id descending
+    """Render the home page with the two most recent course reviews."""
+    # Pull related records in the same query so the template does not issue
+    # extra database queries for each review card.
     recent_reviews = Review.objects.select_related(
         'review_course', 
         'review_professor', 
@@ -16,15 +21,58 @@ def home(request):
     })
 
 def review(request):
-    return render(request, 'review.html')
+    """Render the review submission form with selectable courses and professors."""
+    courses = Course.objects.all().order_by('course_code')
+    professors = Professor.objects.all().order_by('professor_name')
+
+    return render(request, 'review.html', {
+        'courses': courses,
+        'professors': professors,
+    })
 
 def search(request):
-    return render(request, 'search.html')
+    """Render the searchable course list."""
+    # Prefetch professors because the template lists them for every course.
+    courses = Course.objects.prefetch_related('course_professors').order_by('course_code')
+    return render(request, 'search.html', {
+        'courses': courses
+    })
+
+def course_detail(request, course_id):
+    """Render details, aggregate review scores, and reviews for one course."""
+    # Prefetch the many-to-many professor list before rendering the header.
+    course = get_object_or_404(
+        Course.objects.prefetch_related('course_professors'),
+        pk=course_id
+    )
+
+    # Reviews are reused for both the list and summary stats; select_related
+    # avoids one extra query per review for professor/user/major data.
+    reviews = Review.objects.filter(review_course=course).select_related(
+        'review_professor',
+        'review_user__user_major'
+    ).order_by('-review_date', '-id')
+
+    # Aggregate in the database so the page can show summary values without
+    # manually iterating over every review in Python.
+    review_stats = reviews.aggregate(
+        review_count=Count('id'),
+        average_difficulty=Avg('difficulty_score'),
+        average_time=Avg('time_score')
+    )
+
+    return render(request, 'course_detail.html', {
+        'course': course,
+        'reviews': reviews,
+        'review_stats': review_stats
+    })
 
 def about(request):
+    """Render the static about page."""
     return render(request, "about.html")
 
 def login_view(request):
+    """Authenticate users and redirect staff users to the admin dashboard."""
     if request.method == 'POST':
         username = request.POST['username']
         password = request.POST['password']
@@ -49,6 +97,7 @@ def login_view(request):
     return render(request, 'Registration/login.html')
 
 def register_view(request):
+    """Create a new user account and sign the user in after registration."""
     if request.method == 'POST':
         username = request.POST['username']
         email = request.POST['email']

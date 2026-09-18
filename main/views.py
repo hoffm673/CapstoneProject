@@ -1,9 +1,19 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login
 from .models import User
+from .models import Review
 
 def home(request):
-    return render(request, 'home.html')
+    # Fetch the 2 most recent reviews, ordered by date and id descending
+    recent_reviews = Review.objects.select_related(
+        'review_course', 
+        'review_professor', 
+        'review_user__user_major'
+    ).order_by('-review_date', '-id')[:2]
+
+    return render(request, 'home.html', {
+        'recent_reviews': recent_reviews
+    })
 
 def review(request):
     return render(request, 'review.html')

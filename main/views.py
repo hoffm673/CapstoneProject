@@ -34,14 +34,17 @@ def login_view(request):
             username=username,
             password=password
         )
-
-        if user is not None:
+        if user is None:
+            return render(request, 'Registration/login.html', {
+                'error': 'Invalid username or password'
+            })
+        if user.is_staff:
             login(request, user)
+            return redirect('/admin/')
+        else:
             return redirect('home')
-
-        return render(request, 'login.html', {
-            'error': 'Invalid username or password'
-        })
+        # Login successful
+        login(request, user)
 
     return render(request, 'Registration/login.html')
 
@@ -54,13 +57,13 @@ def register_view(request):
 
         # Check that passwords match
         if password != password_confirm:
-            return render(request, 'register.html', {
+            return render(request, 'Registration/register.html', {
                 'error': 'Passwords do not match.'
             })
 
         # Check if username already exists
         if User.objects.filter(username=username).exists():
-            return render(request, 'register.html', {
+            return render(request, 'Registration/register.html', {
                 'error': 'Username already exists.'
             })
 

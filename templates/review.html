@@ -47,49 +47,26 @@
             </div>
 
             <div class="row mb-3">
-    <div class="col">
-        <label for="difficulty_score" class="form-label">Difficulty (1-5)</label>
-        <select class="form-select" id="difficulty_score" name="difficulty_score" required>
-            <option value="" selected disabled>Rate it</option>
-            {% for i in "12345" %}
-                <option value="{{ i }}">{{ i }}</option>
-            {% endfor %}
-        </select>
-    </div>
+                <div class="col">
+                    <label for="difficulty_score" class="form-label">Difficulty (1-5)</label>
+                    <select class="form-select" id="difficulty_score" name="difficulty_score" required>
+                        <option value="" selected disabled>Rate it</option>
+                        {% for i in "12345" %}
+                            <option value="{{ i }}">{{ i }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
 
-    <div class="col">
-        <label for="time_score" class="form-label">
-            Time Commitment: <span id="time_score_display">5-8</span> hrs/week
-        </label>
-        <input
-            type="range"
-            class="form-range"
-            id="time_score"
-            name="time_score"
-            min="0"
-            max="20"
-            step="1"
-            value="5"
-            oninput="updateTimeDisplay(this.value)"
-            required
-        >
-        <div class="d-flex justify-content-between text-muted small">
-            <span>0</span>
-            <span>20+</span>
-        </div>
-        <div class="form-text">Roughly how many hours per week did you spend on this course?</div>
-    </div>
-</div>
-
-    <script>
-    const TIME_BUFFER = 3; // hours added on top of the lower bound for display only
-
-    function updateTimeDisplay(value) {
-        const lower = parseInt(value, 10);
-        const upper = lower + TIME_BUFFER;
-        document.getElementById('time_score_display').textContent = `${lower}-${upper}`;
-    }
-    </script>
+                <div class="col">
+                    <label for="time_score" class="form-label">Time Commitment (1-5)</label>
+                    <select class="form-select" id="time_score" name="time_score" required>
+                        <option value="" selected disabled>Rate it</option>
+                        {% for i in "12345" %}
+                            <option value="{{ i }}">{{ i }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
 
             <div class="mb-3">
                 <label for="review_text" class="form-label">Your Review</label>

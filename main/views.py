@@ -2,6 +2,8 @@ from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login
 from .models import User
 from .models import Review
+from .models import Course, Professor
+
 
 def home(request):
     # Fetch the 2 most recent reviews, ordered by date and id descending
@@ -16,11 +18,19 @@ def home(request):
     })
 
 def review(request):
-    return render(request, 'review.html')
+    courses = Course.objects.all().order_by('course_code')
+    professors = Professor.objects.all().order_by('professor_name')
+
+    return render(request, 'review.html', {
+        'courses': courses,
+        'professors': professors,
+    })
 
 def search(request):
-    return render(request, 'search.html')
-
+    courses = Course.objects.prefetch_related('course_professors').order_by('course_code')
+    return render(request, 'search.html', {
+        'courses': courses
+    })
 def about(request):
     return render(request, "about.html")
 

@@ -1,19 +1,79 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Search Page</title>
-</head>
-<body>
-
 {% extends "base.html" %}
+{% load static %}
+
+{% block title %}Search Courses{% endblock %}
 
 {% block content %}
 
-    <h1>Search Page</h1>
-    <p>This is where users can search through the database to find ratings for specific courses</p>
+<div class="container">
+
+    <h1 class="mb-3">Find a Course</h1>
+    <p class="text-muted">Search by course code, name, or professor.</p>
+
+    <div class="mb-4">
+        <input
+            type="text"
+            id="courseSearch"
+            class="form-control form-control-lg"
+            placeholder="Try 'COMP SCI 351' or 'Algorithm' or 'Dr. Joe'..."
+            autocomplete="off"
+        >
+    </div>
+
+    <div id="courseList" class="list-group">
+        {% for course in courses %}
+            <div
+                class="list-group-item course-item"
+                data-search="{{ course.course_code|lower }} {{ course.course_name|lower }} {% for prof in course.course_professors.all %}{{ prof.professor_name|lower }} {% endfor %}"
+            >
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h5 class="mb-1">{{ course.course_code }} - {{ course.course_name }}</h5>
+                        <small class="text-muted">
+                            {% for prof in course.course_professors.all %}
+                                {{ prof.professor_name }}{% if not forloop.last %}, {% endif %}
+                            {% empty %}
+                                No professor listed
+                            {% endfor %}
+                        </small>
+                    </div>
+                    <span class="badge bg-secondary rounded-pill">
+                        {{ course.course_credits }} cr
+                    </span>
+                </div>
+            </div>
+        {% empty %}
+            <p class="text-start">No courses in the database yet.</p>
+        {% endfor %}
+    </div>
+
+    <p id="noResults" class="text-muted mt-3" style="display: none;">
+        No courses match your search.
+    </p>
+
+</div>
+
+<script>
+    const searchInput = document.getElementById('courseSearch');
+    const items = document.querySelectorAll('.course-item');
+    const noResults = document.getElementById('noResults');
+
+    searchInput.addEventListener('keyup', function () {
+        const query = this.value.toLowerCase().trim();
+        let visibleCount = 0;
+
+        items.forEach(function (item) {
+            const haystack = item.getAttribute('data-search');
+            if (haystack.includes(query)) {
+                item.style.display = '';
+                visibleCount++;
+            } else {
+                item.style.display = 'none';
+            }
+        });
+
+        noResults.style.display = visibleCount === 0 ? 'block' : 'none';
+    });
+</script>
 
 {% endblock %}
-
-</body>
-</html>

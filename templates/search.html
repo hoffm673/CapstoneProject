@@ -22,8 +22,9 @@
 
     <div id="courseList" class="list-group">
         {% for course in courses %}
-            <div
-                class="list-group-item course-item"
+            <a
+                href="{% url 'course_detail' course.id %}"
+                class="list-group-item list-group-item-action course-item"
                 data-search="{{ course.course_code|lower }} {{ course.course_name|lower }} {% for prof in course.course_professors.all %}{{ prof.professor_name|lower }} {% endfor %}"
             >
                 <div class="d-flex justify-content-between align-items-start">
@@ -41,7 +42,7 @@
                         {{ course.course_credits }} cr
                     </span>
                 </div>
-            </div>
+            </a>
         {% empty %}
             <p class="text-start">No courses in the database yet.</p>
         {% endfor %}

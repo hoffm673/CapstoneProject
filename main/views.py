@@ -25,6 +25,32 @@ def review(request):
     courses = Course.objects.all().order_by('course_code')
     professors = Professor.objects.all().order_by('professor_name')
 
+    # Takes the inputs from the review form (POST) and adds them in the database
+    if request.method == 'POST':
+        course_id = request.POST.get('course')
+        professor_id = request.POST.get('professor')
+        difficulty_score = request.POST.get('difficulty_score')
+        time_score = request.POST.get('time_score')
+        review_text = request.POST.get('review_text')
+
+        # Retrieves a course object using the course ID
+        course = get_object_or_404(Course, pk=course_id)
+        # Retrieves the professor using the professor ID
+        professor = get_object_or_404(Professor, pk=professor_id)
+
+        # Creates a new Review object using the data collected from the form (POST)
+        Review.objects.create(
+            review_user=request.user,
+            review_course=course,
+            review_professor=professor,
+            difficulty_score=difficulty_score,
+            time_score=time_score,
+            review_text=review_text
+        )
+
+        # Redirects the user to the 'search' page after submitting review
+        return redirect('search')
+
     return render(request, 'review.html', {
         'courses': courses,
         'professors': professors,
@@ -90,9 +116,10 @@ def login_view(request):
             login(request, user)
             return redirect('/admin/')
         else:
+            # Login successful
+            login(request, user)
             return redirect('home')
-        # Login successful
-        login(request, user)
+
 
     return render(request, 'Registration/login.html')
 

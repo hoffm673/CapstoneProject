@@ -2,25 +2,62 @@
 {% load static %}
 
 {% block content %}
+<section class="hero min-vh-100 d-flex align-items-center text-center text-grey position-relative">
 
-<section class="hero d-flex align-items-center text-center text-grey">
-    <div class="container">
-        <h1 class="display-2 fw-bold mb-4">
-            Find reviews for courses at UW-Milwaukee and generate an overall course load for a schedule.
-        </h1>
+    <div class="container-fluid h-100">
+        <div class="row h-100 align-items-center">
 
-        <p class="lead mb-4">
-            This website is a capstone project created by Pachi, Connor, Noah, David, and Callahan.
-        </p>
+            <!-- LEFT SIDE -->
+            <div class="col-6">
 
-        <div class="d-flex justify-content-center gap-3">
+                <h1 class="display-2 fw-bold mb-4">
+                    Find a review
+                </h1>
 
-            <a href="#" class="btn btn-outline-dark btn-lg">Learn More</a>
+
+
+                <form action="{% url 'search' %}" method="GET"
+                      class="d-flex justify-content-center gap-2">
+
+                    <input
+                        type="text"
+                        name="query"
+                        class="form-control form-control-lg"
+                        placeholder="Search for a class..."
+                    >
+
+                    <button type="submit" class="btn btn-dark btn-lg">
+                        <i class="bi bi-search"></i> Search
+                    </button>
+
+                </form>
+
+            </div>
+
+
+            <!-- RIGHT SIDE -->
+            <div class="col-6">
+                <p class="lead mb-4">
+                    Log in and generate a class load estimate
+                    for your enrolled courses.
+                </p>
+
+                <a href="#" class="btn btn-outline-dark btn-lg">
+                    Learn More
+                </a>
+
+            </div>
+
         </div>
-        <i class="bi bi-arrow-down"></i>
     </div>
-</section>
 
+
+    <!-- DOWN ARROW -->
+    <div class="position-absolute bottom-0 start-50 translate-middle-x mb-4">
+        <i class="bi bi-arrow-down fs-2"></i>
+    </div>
+
+</section>
 <div class="flex-container">
     <div class="container text-center pt-3">
         <div class="container">

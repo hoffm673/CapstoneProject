@@ -112,3 +112,13 @@ STATIC_URL = 'static/'
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static'),
 ]
+
+# CapstoneProject/settings.py
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.office365.com'  # <--- Microsoft Outlook SMTP server
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'uwmcourseloadcalculator@outlook.com'
+EMAIL_HOST_PASSWORD = 'Gop@nthers23$'
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER

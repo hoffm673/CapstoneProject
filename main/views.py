@@ -199,7 +199,7 @@ def register_view(request):
             f"Your verification code is: {code}\n\nVerify your account here: {verify_url}",
             getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@uwm.edu'),
             [user.email],
-            fail_silently=True,
+            fail_silently=False,
         )
 
         return redirect("verify_email")
@@ -274,7 +274,7 @@ def resend_verification_code(request):
         f'Your new verification code is: {code}\n\nVerify your account here: {verify_url}',
         getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@uwm.edu'),
         [user.email],
-        fail_silently=True,
+        fail_silently=False,
     )
 
     messages.success(request, 'A new verification code has been sent.')
@@ -301,7 +301,7 @@ def forgot_password_view(request):
                 f"Hello {user.username},\n\nYou requested a password reset. Click the link below to set a new password:\n\n{reset_url}\n\nIf you did not request this, please ignore this email.",
                 getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@uwm.edu'),
                 [user.email],
-                fail_silently=True,
+                fail_silently=False,
             )
 
         # Show success message regardless of whether user was found (security best practice)

@@ -25,8 +25,8 @@ class Professor(models.Model):
 # Course model
 class Course(models.Model):
 
-    # The name of the course (Ex. Algorithm Design & Analysis)
-    course_name = models.CharField(max_length=100, unique=True)
+    # The name of the course (Ex. Algorithm Design & Analysis) -> changed to false for classes taken at grad vs undergrad level
+    course_name = models.CharField(max_length=100, unique=False)
 
     # The course code/identifier (Ex. COMP SCI 351)
     course_code = models.CharField(max_length=100, unique=True)
@@ -37,6 +37,7 @@ class Course(models.Model):
     # The selection of professors that teach the course
     # Uses ManyToManyField because a course can be taught by multiple professors/TAs
     course_professors = models.ManyToManyField(Professor)
+    course_details = models.TextField(blank=True)
 
     def __str__(self):
         return self.course_code + " - " + self.course_name

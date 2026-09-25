@@ -15,6 +15,12 @@
             Enter the code below to activate your account.
         </p>
 
+        {% if verification_email %}
+            <p class="text-center small">
+                Sent to: <strong>{{ verification_email }}</strong>
+            </p>
+        {% endif %}
+
         <!-- Display Messages (e.g. "A new verification code has been sent.") -->
         {% if messages %}
             {% for message in messages %}

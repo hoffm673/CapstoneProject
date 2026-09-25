@@ -197,13 +197,9 @@ def register_view(request):
         request.session["verification_code"] = code
         request.session["verification_user_id"] = user.id
 
-        # Dynamically build verification URL
-        verify_path = reverse('verify_email')
-        verify_url = request.build_absolute_uri(verify_path)
-
         send_mail(
             "Verify your account",
-            f"Your verification code is: {code}\n\nVerify your account here: {verify_url}",
+            f"Your verification code is: {code}",
             getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@uwm.edu'),
             [user.email],
             fail_silently=False,
@@ -253,7 +249,16 @@ def verify_email(request):
 
         return redirect('home')
 
-    return render(request, 'Registration/verify_email.html')
+    verification_email = None
+    user_id = request.session.get('verification_user_id')
+    if user_id:
+        verification_email = User.objects.filter(id=user_id).values_list(
+            'email', flat=True
+        ).first()
+
+    return render(request, 'Registration/verify_email.html', {
+        'verification_email': verification_email
+    })
 
 
 def resend_verification_code(request):
@@ -274,11 +279,9 @@ def resend_verification_code(request):
     # Store code in session
     request.session['verification_code'] = code
 
-    verify_url = request.build_absolute_uri('/verify-email/')
-
     send_mail(
         'Your new verification code',
-        f'Your new verification code is: {code}\n\nVerify your account here: {verify_url}',
+        f'Your new verification code is: {code}',
         getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@uwm.edu'),
         [user.email],
         fail_silently=False,

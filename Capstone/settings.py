@@ -130,3 +130,4 @@ else:
     EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER or "noreply@uwm.edu"
+LOGIN_URL = 'login'

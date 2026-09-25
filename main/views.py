@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth import authenticate, login
+from django.contrib.auth import authenticate, login, logout
 from django.db.models import Avg, Count
 from .models import User
 from .models import Review
@@ -13,7 +13,7 @@ from django.urls import reverse
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
-
+from django.contrib.auth.decorators import login_required
 
 
 def home(request):
@@ -30,6 +30,7 @@ def home(request):
         'recent_reviews': recent_reviews
     })
 
+@login_required
 def review(request):
     """Render the review submission form with selectable courses and professors."""
     courses = Course.objects.all().order_by('course_code')
@@ -65,6 +66,12 @@ def review(request):
         'courses': courses,
         'professors': professors,
     })
+
+def logout_view(request):
+    """Log the user out and redirect to the home page."""
+    logout(request)
+    messages.success(request, "You have been logged out.")
+    return redirect('home')
 
 def search(request):
     """Render the searchable course list."""

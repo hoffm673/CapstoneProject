@@ -1,4 +1,5 @@
-from django.test import TestCase
+from django.core import mail
+from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from .models import Course, Professor, Review, User
@@ -47,3 +48,22 @@ class CourseDetailTests(TestCase):
             response,
             reverse('course_detail', args=[self.course.id])
         )
+
+
+@override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
+class RegistrationTests(TestCase):
+    """Tests for account creation and email verification setup."""
+
+    def test_registration_sends_verification_email(self):
+        response = self.client.post(reverse('register'), {
+            'username': 'newstudent',
+            'email': 'newstudent@uwm.edu',
+            'password': 'A secure password 123!',
+            'password_confirm': 'A secure password 123!',
+        })
+
+        user = User.objects.get(username='newstudent')
+        self.assertRedirects(response, reverse('verify_email'))
+        self.assertFalse(user.is_active)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn('verification code', mail.outbox[0].body)

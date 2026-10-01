@@ -16,6 +16,7 @@ from django.utils.encoding import force_bytes, force_str
 from django.contrib.auth.decorators import login_required
 
 
+
 def home(request):
     """Render the home page with the two most recent course reviews."""
     # Pull related records in the same query so the template does not issue
@@ -352,3 +353,27 @@ def reset_password_confirm_view(request, uidb64, token):
         return render(request, 'Registration/reset_password_confirm.html', {
             'error': 'The password reset link is invalid or has expired.'
         })
+
+@login_required
+def my_profile(request):
+
+    username_error = None
+
+    # Method for changing username on the profile page
+    if request.method == 'POST':
+        new_username = request.POST.get('username')
+
+        # Check if the username already exists
+        if User.objects.filter(username=new_username).exclude(id=request.user.id).exists():
+            username_error = "That username is already taken."
+        else:
+            request.user.username = new_username
+            request.user.save()
+
+    # grabs all the reviews for the logged in user
+    reviews = Review.objects.filter(review_user=request.user)
+
+    return render(request, 'my_profile.html', {
+        'reviews': reviews,
+        'username_error': username_error
+    })

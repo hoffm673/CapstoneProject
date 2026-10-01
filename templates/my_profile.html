@@ -1,0 +1,130 @@
+
+    {% extends "base.html" %}
+
+    {% block title %}My Profile{% endblock %}
+
+    {% block content %}
+
+    <div class="container mt-5">
+
+        <h1>My Profile</h1>
+
+        <!-- Profile card that shows the user's name, email, and major-->
+        <div class="card mt-4">
+            <div class="card-body">
+
+                <h4 class="card-title">{{ user.username }}</h4>
+
+                <p>
+                    <strong>Email:</strong>
+                    {{ user.email }}
+                </p>
+
+                <p>
+                    <strong>Major:</strong>
+                    {% if user.user_major %}
+                        {{ user.user_major.major_name }}
+                    {% else %}
+                        No major selected
+                    {% endif %}
+                </p>
+
+            </div>
+        </div>
+
+
+        <!-- Account settings section -->
+        <h2 class="mt-5">Account Settings</h2>
+
+        <div class="card mt-3">
+            <div class="card-body">
+
+                <h5 class="card-title">Change Username</h5>
+
+                <form method="POST">
+                    {% csrf_token %}
+
+                    <div class="mb-3">
+                        <label for="username" class="form-label">
+                            Username
+                        </label>
+
+                        <input
+                            type="text"
+                            class="form-control"
+                            id="username"
+                            name="username"
+                            value="{{ user.username }}"
+                            required
+                        >
+
+                        {% if username_error %}
+                            <div class="text-danger mt-2">
+                                {{ username_error }}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">
+                        Update Username
+                    </button>
+
+                </form>
+
+            </div>
+        </div>
+
+
+        <!-- Card that shows all the user's reviews -->
+        <h2 class="mt-5">My Reviews</h2>
+            {% if reviews %}
+
+                {% for review in reviews %}
+
+                    <div class="card mt-3">
+                        <div class="card-body">
+
+                            <h5 class="card-title">
+                                {{ review.review_course }}
+                            </h5>
+
+                            <p>
+                                <strong>Professor:</strong>
+                                {{ review.review_professor }}
+                            </p>
+
+                            <p>
+                                <strong>Difficulty:</strong>
+                                {{ review.difficulty_score }}/5
+                            </p>
+
+                            <p>
+                                <strong>Time Consumption:</strong>
+                                {{ review.time_score }}/5
+                            </p>
+
+                            <p>
+                                {{ review.review_text }}
+                            </p>
+
+                            <small class="text-muted">
+                                Posted {{ review.review_date }}
+                            </small>
+
+                        </div>
+                    </div>
+
+                {% endfor %}
+
+            {% else %}
+
+                <p class="text-muted">You haven't submitted any reviews yet.</p>
+
+            {% endif %}
+
+
+
+    </div>
+
+    {% endblock %}
+

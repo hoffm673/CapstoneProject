@@ -21,6 +21,7 @@ from django.template.loader import render_to_string
 from django.db.models import Q, Case, When, Value, IntegerField
 
 
+
 def home(request):
     """Render the home page with the two most recent course reviews."""
     # Pull related records in the same query so the template does not issue
@@ -179,11 +180,24 @@ def register_view(request):
         password_confirm = request.POST['password_confirm']
 
         pattern = r"^[A-Za-z0-9._%+-]+@uwm\.edu$"
+        username_pattern = r"^[A-Za-z0-9._-]{3,20}$"
+        password_pattern = r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$"
 
         # Check that passwords match
         if password != password_confirm:
             return render(request, 'Registration/register.html', {
                 'error': 'Passwords do not match.'
+            })
+        # Validate username
+        if not re.match(username_pattern, username):
+            return render(request, "Registration/register.html", {
+                "error": "Username must be 3-20 characters and can only contain letters, numbers, periods, underscores, and hyphens."
+            })
+
+        # Validate password
+        if not re.match(password_pattern, password):
+            return render(request, "Registration/register.html", {
+                "error": "Password must be at least 8 characters and contain at least one uppercase letter, one lowercase letter, one number, and one special character."
             })
 
         # Check if username already exists
@@ -394,3 +408,27 @@ def course_lookup(request):
         for c in courses[:5]
     ]
     return JsonResponse({'results': results})
+
+@login_required
+def my_profile(request):
+
+    username_error = None
+
+    # Method for changing username on the profile page
+    if request.method == 'POST':
+        new_username = request.POST.get('username')
+
+        # Check if the username already exists
+        if User.objects.filter(username=new_username).exclude(id=request.user.id).exists():
+            username_error = "That username is already taken."
+        else:
+            request.user.username = new_username
+            request.user.save()
+
+    # grabs all the reviews for the logged in user
+    reviews = Review.objects.filter(review_user=request.user)
+
+    return render(request, 'my_profile.html', {
+        'reviews': reviews,
+        'username_error': username_error
+    })

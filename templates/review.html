@@ -28,12 +28,7 @@
 
             <div class="mb-3">
                 <label for="course" class="form-label">Course</label>
-                <select class="form-select" id="course" name="course" required>
-                    <option value="" selected disabled>Select a course</option>
-                    {% for course in courses %}
-                        <option value="{{ course.id }}">{{ course.course_code }} - {{ course.course_name }}</option>
-                    {% endfor %}
-                </select>
+                <select id="course" name="course" required></select>
             </div>
 
             <div class="mb-3">
@@ -89,5 +84,32 @@
     </div>
 
 </div>
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+
+<style>
+    /* Keep the results list short so it doesn't cover the rest of the form */
+    .ts-dropdown .ts-dropdown-content { max-height: 180px; }
+</style>
+
+<script>
+    new TomSelect('#course', {
+        valueField: 'id',
+        labelField: 'label',
+        placeholder: 'Search for a course...',
+        maxOptions: 5,
+        loadThrottle: 250,
+        score: function () { return function () { return 1; }; },
+        sortField: '$order',
+        load: function (query, callback) {
+            if (!query.length) return callback();   // wait until they type something
+            this.clearOptions();
+            fetch(`{% url 'course_lookup' %}?q=${encodeURIComponent(query)}`)
+                .then(response => response.json())
+                .then(data => callback(data.results))
+                .catch(() => callback());
+        }
+    });
+</script>
 
 {% endblock %}

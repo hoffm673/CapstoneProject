@@ -1,0 +1,23 @@
+{% for course in courses %}
+    <a
+        href="{% url 'course_detail' course.id %}"
+        class="list-group-item list-group-item-action course-item"
+    >
+        <div class="d-flex justify-content-between align-items-start">
+            <div>
+                <h5 class="mb-1">{{ course.course_code }} - {{ course.course_name }}</h5>
+                <small class="text-muted">
+                    {% for prof in course.course_professors.all %}
+                        {{ prof.professor_name }}{% if not forloop.last %}, {% endif %}
+                    {% empty %}
+                        No professor listed
+                    {% endfor %}
+                </small>
+            </div>
+            <span class="badge bg-secondary rounded-pill">
+                {{ course.course_credits }} cr
+            </span>
+        </div>
+    </a>
+
+{% endfor %}

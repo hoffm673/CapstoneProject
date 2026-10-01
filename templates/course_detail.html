@@ -32,7 +32,14 @@
         </div>
     </div>
 </section>
-
+<section class="mb-4">
+    <h2 class="h5">Course Description</h2>
+    {% if course.course_details %}
+        <p class="mb-0">{{ course.course_details|linebreaksbr }}</p>
+    {% else %}
+        <p class="text-muted mb-0">No description available for this course.</p>
+    {% endif %}
+</section>
 <section class="row g-3 mb-4">
     <div class="col-md-4">
         <div class="border rounded p-3 h-100">

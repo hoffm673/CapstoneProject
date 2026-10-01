@@ -6,6 +6,7 @@ urlpatterns = [
     path('review/', views.review, name='review'),
     path('search/', views.search, name='search'),
     path('courses/<int:course_id>/', views.course_detail, name='course_detail'),
+    path('courses/lookup/', views.course_lookup, name='course_lookup'),
 
 #login / register
     path('login/', views.login_view, name='login'),

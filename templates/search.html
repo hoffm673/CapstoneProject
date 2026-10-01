@@ -17,63 +17,102 @@
             class="form-control form-control-lg"
             placeholder="Try 'COMP SCI 351' or 'Algorithm' or 'Dr. Joe'..."
             autocomplete="off"
+            value="{{ query }}"
         >
     </div>
 
     <div id="courseList" class="list-group">
-        {% for course in courses %}
-            <a
-                href="{% url 'course_detail' course.id %}"
-                class="list-group-item list-group-item-action course-item"
-                data-search="{{ course.course_code|lower }} {{ course.course_name|lower }} {% for prof in course.course_professors.all %}{{ prof.professor_name|lower }} {% endfor %}"
-            >
-                <div class="d-flex justify-content-between align-items-start">
-                    <div>
-                        <h5 class="mb-1">{{ course.course_code }} - {{ course.course_name }}</h5>
-                        <small class="text-muted">
-                            {% for prof in course.course_professors.all %}
-                                {{ prof.professor_name }}{% if not forloop.last %}, {% endif %}
-                            {% empty %}
-                                No professor listed
-                            {% endfor %}
-                        </small>
-                    </div>
-                    <span class="badge bg-secondary rounded-pill">
-                        {{ course.course_credits }} cr
-                    </span>
-                </div>
-            </a>
-        {% empty %}
-            <p class="text-start">No courses in the database yet.</p>
-        {% endfor %}
+        {% include "_course_items.html" %}
     </div>
 
-    <p id="noResults" class="text-muted mt-3" style="display: none;">
+    <p id="noResults" class="text-muted mt-3" style="display: {% if courses %}none{% else %}block{% endif %};">
         No courses match your search.
     </p>
+
+    <div id="scrollSentinel" style="height: 1px;"></div>
+
+    <div id="loadingSpinner" class="text-center my-3" style="display: none;">
+        <div class="spinner-border text-secondary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
 
 </div>
 
 <script>
     const searchInput = document.getElementById('courseSearch');
-    const items = document.querySelectorAll('.course-item');
+    const courseList = document.getElementById('courseList');
     const noResults = document.getElementById('noResults');
+    const spinner = document.getElementById('loadingSpinner');
+    const sentinel = document.getElementById('scrollSentinel');
 
-    searchInput.addEventListener('keyup', function () {
-        const query = this.value.toLowerCase().trim();
-        let visibleCount = 0;
+    let nextPage = 2;
+    let hasNext = {{ has_next|yesno:"true,false" }};
+    let loading = false;
+    let requestId = 0;   // lets us ignore responses from outdated searches
 
-        items.forEach(function (item) {
-            const haystack = item.getAttribute('data-search');
-            if (haystack.includes(query)) {
-                item.style.display = '';
-                visibleCount++;
-            } else {
-                item.style.display = 'none';
+    async function fetchPage(page, query) {
+        const params = new URLSearchParams({ partial: '1', page: page, query: query });
+        const response = await fetch(`{% url 'search' %}?${params}`);
+        return response.json();
+    }
+
+    async function loadMore() {
+        if (loading || !hasNext) return;
+        loading = true;
+        const myRequest = requestId;
+        spinner.style.display = 'block';
+
+        try {
+            const data = await fetchPage(nextPage, searchInput.value.trim());
+            if (myRequest !== requestId) return;   // search changed mid-request
+            courseList.insertAdjacentHTML('beforeend', data.html);
+            hasNext = data.has_next;
+            nextPage++;
+        } catch (err) {
+            console.error('Failed to load courses', err);
+        } finally {
+            if (myRequest === requestId) {
+                loading = false;
+                spinner.style.display = 'none';
             }
-        });
+        }
+    }
 
-        noResults.style.display = visibleCount === 0 ? 'block' : 'none';
+    async function runSearch() {
+        requestId++;
+        const myRequest = requestId;
+        loading = true;
+        spinner.style.display = 'block';
+
+        try {
+            const data = await fetchPage(1, searchInput.value.trim());
+            if (myRequest !== requestId) return;
+            courseList.innerHTML = data.html;
+            hasNext = data.has_next;
+            nextPage = 2;
+            noResults.style.display = courseList.children.length === 0 ? 'block' : 'none';
+        } catch (err) {
+            console.error('Search failed', err);
+        } finally {
+            if (myRequest === requestId) {
+                loading = false;
+                spinner.style.display = 'none';
+            }
+        }
+    }
+
+    // Load the next batch when the sentinel is near the bottom of the viewport
+    const observer = new IntersectionObserver(function (entries) {
+        if (entries[0].isIntersecting) loadMore();
+    }, { rootMargin: '300px' });
+    observer.observe(sentinel);
+
+    // Debounce typing so we don't hit the server on every keystroke
+    let debounceTimer;
+    searchInput.addEventListener('input', function () {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(runSearch, 300);
     });
 </script>
 

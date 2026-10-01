@@ -14,6 +14,11 @@ from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
+from django.db.models import Q
+from django.http import JsonResponse
+from django.template.loader import render_to_string
+from django.db.models import Q, Case, When, Value, IntegerField
 
 
 def home(request):
@@ -74,13 +79,29 @@ def logout_view(request):
     return redirect('home')
 
 def search(request):
-    """Render the searchable course list."""
-    # Prefetch professors because the template lists them for every course.
+    """Render the course list; serves further pages as JSON for infinite scroll."""
+    query = request.GET.get('query', '').strip()
+    COURSES_PER_PAGE = 20
     courses = Course.objects.prefetch_related('course_professors').order_by('course_code')
-    return render(request, 'search.html', {
-        'courses': courses
-    })
+    if query:
+        courses = courses.filter(
+            Q(course_code__icontains=query) |
+            Q(course_name__icontains=query) |
+            Q(course_professors__professor_name__icontains=query)
+        ).distinct()
 
+    page_obj = Paginator(courses, COURSES_PER_PAGE).get_page(request.GET.get('page'))
+
+    # Scroll requests ask for just the next batch of course rows
+    if request.GET.get('partial') == '1':
+        html = render_to_string('_course_items.html', {'courses': page_obj}, request=request)
+        return JsonResponse({'html': html, 'has_next': page_obj.has_next()})
+
+    return render(request, 'search.html', {
+        'courses': page_obj,
+        'has_next': page_obj.has_next(),
+        'query': query,
+    })
 def course_detail(request, course_id):
     """Render details, aggregate review scores, and reviews for one course."""
     # Prefetch the many-to-many professor list before rendering the header.
@@ -352,3 +373,24 @@ def reset_password_confirm_view(request, uidb64, token):
         return render(request, 'Registration/reset_password_confirm.html', {
             'error': 'The password reset link is invalid or has expired.'
         })
+def course_lookup(request):
+    query = request.GET.get('q', '').strip()
+
+    courses = Course.objects.filter(
+        Q(course_code__icontains=query) |
+        Q(course_name__icontains=query)
+    ).annotate(
+        rank=Case(
+            When(course_code__istartswith=query, then=Value(0)),
+            When(course_code__icontains=query, then=Value(1)),
+            When(course_name__istartswith=query, then=Value(2)),
+            default=Value(3),
+            output_field=IntegerField(),
+        )
+    ).order_by('rank', 'course_code')
+
+    results = [
+        {'id': c.id, 'label': f'{c.course_code} - {c.course_name}'}
+        for c in courses[:5]
+    ]
+    return JsonResponse({'results': results})

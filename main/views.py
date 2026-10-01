@@ -159,11 +159,24 @@ def register_view(request):
         password_confirm = request.POST['password_confirm']
 
         pattern = r"^[A-Za-z0-9._%+-]+@uwm\.edu$"
+        username_pattern = r"^[A-Za-z0-9._-]{3,20}$"
+        password_pattern = r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$"
 
         # Check that passwords match
         if password != password_confirm:
             return render(request, 'Registration/register.html', {
                 'error': 'Passwords do not match.'
+            })
+        # Validate username
+        if not re.match(username_pattern, username):
+            return render(request, "Registration/register.html", {
+                "error": "Username must be 3-20 characters and can only contain letters, numbers, periods, underscores, and hyphens."
+            })
+
+        # Validate password
+        if not re.match(password_pattern, password):
+            return render(request, "Registration/register.html", {
+                "error": "Password must be at least 8 characters and contain at least one uppercase letter, one lowercase letter, one number, and one special character."
             })
 
         # Check if username already exists

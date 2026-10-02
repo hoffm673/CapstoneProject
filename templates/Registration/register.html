@@ -30,8 +30,14 @@
                     class="form-control"
                     id="username"
                     name="username"
+                    minlength="3"
+                    maxlength="20"
+                    pattern="[A-Za-z0-9._-]{3,20}"
+                    aria-describedby="username-help username-count"
                     required
                 >
+                <div id="username-help" class="form-text">Use 3-20 letters, numbers, periods, underscores, or hyphens.</div>
+                <div id="username-count" class="form-text" aria-live="polite" aria-atomic="true">0/20 characters</div>
             </div>
 
             <div class="mb-3">
@@ -58,8 +64,20 @@
                     class="form-control"
                     id="password"
                     name="password"
+                    minlength="8"
+                    aria-describedby="password-requirements"
                     required
                 >
+                <div id="password-requirements" class="form-text mt-2">
+                    Password must include:
+                    <ul class="small mb-0 ps-3">
+                        <li data-password-rule="length">At least 8 characters</li>
+                        <li data-password-rule="uppercase">An uppercase letter</li>
+                        <li data-password-rule="lowercase">A lowercase letter</li>
+                        <li data-password-rule="number">A number</li>
+                        <li data-password-rule="special">A special character</li>
+                    </ul>
+                </div>
             </div>
 
             <div class="mb-3">
@@ -92,5 +110,30 @@
     </div>
 
 </div>
+
+<script>
+    const usernameInput = document.getElementById('username');
+    const usernameCount = document.getElementById('username-count');
+    const passwordInput = document.getElementById('password');
+
+    usernameInput.addEventListener('input', function () {
+        usernameCount.textContent = `${usernameInput.value.length}/20 characters`;
+    });
+
+    const passwordRules = {
+        length: value => value.length >= 8,
+        uppercase: value => /[A-Z]/.test(value),
+        lowercase: value => /[a-z]/.test(value),
+        number: value => /\d/.test(value),
+        special: value => /[^A-Za-z\d]/.test(value)
+    };
+
+    passwordInput.addEventListener('input', function () {
+        for (const [rule, isMet] of Object.entries(passwordRules)) {
+            const item = document.querySelector(`[data-password-rule="${rule}"]`);
+            item.classList.toggle('text-success', isMet(passwordInput.value));
+        }
+    });
+</script>
 
 {% endblock %}

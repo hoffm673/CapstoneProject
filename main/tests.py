@@ -68,6 +68,42 @@ class RegistrationTests(TestCase):
         self.assertEqual(len(mail.outbox), 1)
         self.assertIn('verification code', mail.outbox[0].body)
 
+    def test_registration_rejects_usernames_outside_character_limits(self):
+        for username in ('ab', 'a' * 21):
+            with self.subTest(username=username):
+                response = self.client.post(reverse('register'), {
+                    'username': username,
+                    'email': 'student@uwm.edu',
+                    'password': 'SecurePass123!',
+                    'password_confirm': 'SecurePass123!',
+                })
+
+                self.assertEqual(response.status_code, 200)
+                self.assertContains(response, 'Username must be 3-20 characters')
+                self.assertFalse(User.objects.filter(username=username).exists())
+
+    def test_registration_rejects_passwords_missing_required_character_types(self):
+        passwords = (
+            'Short1!',
+            'lowercase1!',
+            'UPPERCASE1!',
+            'NoNumber!!',
+            'NoSpecial123',
+        )
+
+        for password in passwords:
+            with self.subTest(password=password):
+                response = self.client.post(reverse('register'), {
+                    'username': 'newstudent',
+                    'email': 'student@uwm.edu',
+                    'password': password,
+                    'password_confirm': password,
+                })
+
+                self.assertEqual(response.status_code, 200)
+                self.assertContains(response, 'Password must be at least 8 characters')
+                self.assertFalse(User.objects.filter(username='newstudent').exists())
+
 
 class ReviewSubmissionTests(TestCase):
     # Set up the test data needed to submit a review

@@ -1,88 +1,411 @@
+
 {% extends "base.html" %}
 {% load static %}
 
 {% block content %}
-<section class="hero min-vh-100 d-flex align-items-center text-center text-grey position-relative">
 
-    <div class="container-fluid h-100">
-        <div class="row h-100 align-items-center">
-
-            <!-- LEFT SIDE -->
-            <div class="col-6">
-
-                <h1 class="display-2 fw-bold mb-4">
-                    Find a review
-                </h1>
+<!-- MAIN PAGE -->
+<div class="bg-light min-vh-100">
 
 
+    <!-- ================= HERO ================= -->
 
-                <form action="{% url 'search' %}" method="GET"
-                      class="d-flex justify-content-center gap-2">
+    <section class="bg-dark text-white border-bottom border-dark py-5">
 
-                    <input
-                        type="text"
-                        name="query"
-                        class="form-control form-control-lg"
-                        placeholder="Search for a class..."
-                    >
-
-                    <button type="submit" class="btn btn-dark btn-lg">
-                        <i class="bi bi-search"></i> Search
-                    </button>
-
-                </form>
-
-            </div>
-
-
-            <!-- RIGHT SIDE -->
-            <div class="col-6">
-                <p class="lead mb-4">
-                    Log in and generate a class load estimate
-                    for your enrolled courses.
-                </p>
-
-                <a href="#" class="btn btn-outline-dark btn-lg">
-                    Learn More
-                </a>
-
-            </div>
-
-        </div>
-    </div>
-
-
-    <!-- DOWN ARROW -->
-    <div class="position-absolute bottom-0 start-50 translate-middle-x mb-4">
-        <i class="bi bi-arrow-down fs-2"></i>
-    </div>
-
-</section>
-<div class="flex-container">
-    <div class="container text-center pt-3">
         <div class="container">
-            <h1 class="text-start">Recent Reviews</h1>
 
-            {% for review in recent_reviews %}
-                <div class="card mb-4 text-start">
-                    <div class="card-header">
-                        {{ review.review_course.course_code }} - {{ review.review_course.course_name }}
-                    </div>
-                    <div class="card-body">
-                        <blockquote class="blockquote mb-0">
-                            <p>{{ review.review_text }}</p>
-                            <footer class="blockquote-footer">
-                                {{ review.review_user.username }} talking about <cite title="Professor">{{ review.review_professor.professor_name }}
-                            </footer>
-                        </blockquote>
-                    </div>
+            <div class="row align-items-end">
+
+                <div class="col-lg-8">
+
+                    <p class="text-uppercase fw-bold small mb-3">
+                        UWM // Student Community
+                    </p>
+
+                    <h1 class="display-4 fw-bold mb-3">
+                        Find the class.
+                        <br>
+                        <span class="text-secondary">
+                            Know the experience.
+                        </span>
+                    </h1>
+
+                    <p class="lead text-secondary mb-0">
+                        Real student reviews. Real course experiences.
+                        No guessing what you're signing up for.
+                    </p>
+
                 </div>
-            {% empty %}
-                <p class="text-start">No reviews yet.</p>
-            {% endfor %}
+
+
+
+            </div>
 
         </div>
+
+    </section>
+
+
+
+    <!-- ================= MAIN LAYOUT ================= -->
+
+    <div class="container-fluid">
+
+        <div class="row">
+
+
+            <!-- ================= LEFT SIDEBAR ================= -->
+
+            <aside class="col-lg-2 d-none d-lg-block bg-white border-end">
+
+                <div class="position-sticky top-0 py-4">
+
+                    <p class="text-uppercase fw-bold text-muted small px-3 mb-2">
+                        Explore
+                    </p>
+
+                    <div class="list-group list-group-flush">
+                        <a href="{% url 'review' %}"
+                           class="list-group-item list-group-item-action border-0 fw-semibold">
+
+                            <i class="bi bi-plus-square me-2"></i>
+                            Leave a Review
+
+                        </a>
+
+
+                        <a href="#"
+                           class="list-group-item list-group-item-action border-0 fw-semibold">
+
+                            <i class="bi bi-fire me-2"></i>
+                            Popular
+
+                        </a>
+
+                    </div>
+
+
+                    <div class="px-3 mt-5">
+
+                        <p class="text-uppercase fw-bold text-muted small">
+                            About
+                        </p>
+
+                        <p class="small text-muted">
+                            ClassReview is a student-powered space for talking honestly about classes, professors, and workload at UW-Milwaukee.
+                        </p>
+                         <a href="{% url 'about' %}"
+                           class="fw-bold text-dark text-decoration-none">
+
+                            Learn more →
+
+                        </a>
+
+                    </div>
+
+                </div>
+
+            </aside>
+
+
+
+            <!-- ================= MAIN FEED ================= -->
+
+            <main class="col-lg-7">
+
+                <div class="py-4 px-lg-4">
+
+
+                    <!-- FEED HEADER -->
+
+                    <div class="d-flex justify-content-between align-items-end border-bottom border-dark pb-3 mb-3">
+
+                        <div>
+
+                            <p class="text-uppercase fw-bold small mb-1">
+                                Community
+                            </p>
+
+                            <h2 class="display-6 fw-bold mb-0">
+                                The Latest
+                            </h2>
+
+                        </div>
+
+
+                        <button class="btn btn-outline-dark btn-sm fw-semibold">
+
+                            <i class="bi bi-sliders me-1"></i>
+                            Filter
+
+                        </button>
+
+                    </div>
+
+
+
+                    <!-- ================= REVIEWS ================= -->
+
+                    {% for review in recent_reviews %}
+
+
+                    <article class="bg-white border border-dark mb-3">
+
+
+                        <!-- POST TOP -->
+
+                        <div class="px-4 pt-4">
+
+                            <div class="d-flex justify-content-between align-items-start">
+
+                                <div>
+
+                                    <span class="badge bg-dark rounded-0 px-2 py-1">
+                                        {{ review.review_course.course_code }}
+                                    </span>
+
+                                    <span class="small fw-semibold ms-2">
+                                        {{ review.review_course.course_name }}
+                                    </span>
+
+                                </div>
+
+
+                                <span class="text-uppercase text-muted small fw-semibold">
+                                    {{ review.review_user.username }}
+                                </span>
+
+                            </div>
+
+                        </div>
+
+
+
+                        <!-- POST -->
+
+                        <div class="px-4 py-4">
+
+                            <p class="text-uppercase text-muted small fw-bold mb-2">
+                                Student Review
+                            </p>
+
+
+                            <h3 class="fw-bold mb-3">
+                                {{ review.review_course.course_name }}
+                            </h3>
+
+
+                            <p class="fs-5 mb-4">
+                                "{{ review.review_text }}"
+                            </p>
+
+
+                            <div class="d-flex align-items-center gap-2">
+
+                                <i class="bi bi-person-badge"></i>
+
+                                <span class="small">
+                                    Professor
+                                </span>
+
+                                <strong class="small">
+                                    {{ review.review_professor.professor_name }}
+                                </strong>
+
+                            </div>
+
+                        </div>
+
+
+
+                        <!-- POST FOOTER -->
+
+                        <div class="border-top border-dark px-4 py-2">
+
+                            <div class="d-flex justify-content-between align-items-center">
+
+                                <div class="d-flex gap-2">
+
+                                    <button class="btn btn-sm btn-light fw-semibold">
+
+                                        <i class="bi bi-hand-thumbs-up me-1"></i>
+                                        Helpful
+
+                                    </button>
+
+
+                                    <button class="btn btn-sm btn-light fw-semibold">
+
+                                        <i class="bi bi-chat me-1"></i>
+                                        Discuss
+
+                                    </button>
+
+                                </div>
+
+
+                                <button class="btn btn-sm btn-outline-dark fw-semibold">
+
+                                    Read →
+
+                                </button>
+
+                            </div>
+
+                        </div>
+
+
+                    </article>
+
+
+                    {% empty %}
+
+
+                    <!-- EMPTY STATE -->
+
+                    <div class="bg-white border border-dark p-5 text-center">
+
+                        <i class="bi bi-chat-square-text display-5"></i>
+
+                        <h3 class="fw-bold mt-3">
+                            It's quiet in here.
+                        </h3>
+
+                        <p class="text-muted">
+                            Be the first person to start the conversation.
+                        </p>
+
+                        <a href="{% url 'review' %}"
+                           class="btn btn-dark fw-bold">
+
+                            Start a Review
+
+                        </a>
+
+                    </div>
+
+
+                    {% endfor %}
+
+                </div>
+
+            </main>
+
+
+
+            <!-- ================= RIGHT SIDEBAR ================= -->
+
+            <aside class="col-lg-3 d-none d-lg-block">
+
+                <div class="py-4 pe-lg-4">
+
+
+                    <!-- START HERE -->
+
+                    <div class="bg-dark text-white p-4 mb-3">
+
+                        <p class="text-uppercase small fw-bold text-secondary mb-2">
+                            Your schedule
+                        </p>
+
+                        <h4 class="fw-bold">
+                            How heavy is your semester?
+                        </h4>
+
+                        <p class="text-secondary small">
+                            Estimate your course load before
+                            you commit.
+                        </p>
+
+                        <a href="#"
+                           class="btn btn-light w-100 fw-bold">
+
+                            <i class="bi bi-calculator me-2"></i>
+                            Calculate
+
+                        </a>
+
+                    </div>
+
+
+
+                    <!-- POPULAR -->
+
+                    <div class="bg-white border border-dark p-4 mb-3">
+
+                        <p class="text-uppercase fw-bold small mb-3">
+                            Trending
+                        </p>
+
+
+                        <div class="d-flex justify-content-between border-bottom py-2">
+
+                            <span class="fw-semibold">
+                                CS 351
+                            </span>
+
+                            <span class="text-muted small">
+                                →
+                            </span>
+
+                        </div>
+
+
+                        <div class="d-flex justify-content-between border-bottom py-2">
+
+                            <span class="fw-semibold">
+                                CS 361
+                            </span>
+
+                            <span class="text-muted small">
+                                →
+                            </span>
+
+                        </div>
+
+
+                        <div class="d-flex justify-content-between border-bottom py-2">
+
+                            <span class="fw-semibold">
+                                CS 337
+                            </span>
+
+                            <span class="text-muted small">
+                                →
+                            </span>
+
+                        </div>
+
+
+                        <div class="d-flex justify-content-between py-2">
+
+                            <span class="fw-semibold">
+                                BIO 102
+                            </span>
+
+                            <span class="text-muted small">
+                                →
+                            </span>
+
+                        </div>
+
+                    </div>
+
+
+
+                    <!-- ABOUT -->
+
+
+
+                </div>
+
+            </aside>
+
+        </div>
+
     </div>
+
 </div>
 
 {% endblock %}
+

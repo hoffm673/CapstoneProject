@@ -1,3 +1,4 @@
+
 {% extends "base.html" %}
 {% load static %}
 
@@ -13,8 +14,6 @@
                 <h1 class="display-2 fw-bold mb-4">
                     Find a review
                 </h1>
-
-
 
                 <form action="{% url 'search' %}" method="GET"
                       class="d-flex justify-content-center gap-2">
@@ -34,7 +33,6 @@
 
             </div>
 
-
             <!-- RIGHT SIDE -->
             <div class="col-6">
                 <p class="lead mb-4">
@@ -51,37 +49,111 @@
         </div>
     </div>
 
-
     <!-- DOWN ARROW -->
     <div class="position-absolute bottom-0 start-50 translate-middle-x mb-4">
         <i class="bi bi-arrow-down fs-2"></i>
     </div>
 
 </section>
-<div class="flex-container">
-    <div class="container text-center pt-3">
-        <div class="container">
-            <h1 class="text-start">Recent Reviews</h1>
 
-            {% for review in recent_reviews %}
-                <div class="card mb-4 text-start">
-                    <div class="card-header">
-                        {{ review.review_course.course_code }} - {{ review.review_course.course_name }}
-                    </div>
-                    <div class="card-body">
-                        <blockquote class="blockquote mb-0">
-                            <p>{{ review.review_text }}</p>
-                            <footer class="blockquote-footer">
-                                {{ review.review_user.username }} talking about <cite title="Professor">{{ review.review_professor.professor_name }}
-                            </footer>
-                        </blockquote>
-                    </div>
+<!-- Recent Reviews -->
+<div class="container py-4">
+    <h1 class="mb-4">Recent Reviews</h1>
+
+    <!-- Two reviews per row on medium and larger screens -->
+    <div class="row g-4">
+
+        {% for review in recent_reviews %}
+            {% if review.review_course %}
+
+                <div class="col-12 col-md-6">
+                    <a href="{% url 'course_detail' review.review_course.id %}"
+                       class="text-decoration-none text-reset d-block h-100">
+
+                        <div class="card shadow-sm h-100">
+
+                            <!-- Course name -->
+                            <div class="card-header">
+                                <strong>
+                                    {{ review.review_course.course_code }} -
+                                    {{ review.review_course.course_name }}
+                                </strong>
+                            </div>
+
+                            <div class="card-body">
+
+                                <!-- Difficulty bar -->
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <strong>Difficulty</strong>
+                                        <span>{{ review.difficulty_score }}/5</span>
+                                    </div>
+
+                                    <div class="progress">
+                                        <div class="progress-bar
+                                            {% if review.difficulty_score <= 2 %}
+                                                bg-success
+                                            {% elif review.difficulty_score == 3 %}
+                                                bg-warning
+                                            {% else %}
+                                                bg-danger
+                                            {% endif %}"
+                                            style="width: {% widthratio review.difficulty_score 5 100 %}%"
+                                            role="progressbar"
+                                            aria-valuenow="{{ review.difficulty_score }}"
+                                            aria-valuemin="0"
+                                            aria-valuemax="5">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Time consumption bar -->
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <strong>Time Consumption</strong>
+                                        <span>{{ review.time_score }}/5</span>
+                                    </div>
+
+                                    <div class="progress">
+                                        <div class="progress-bar
+                                            {% if review.time_score <= 2 %}
+                                                bg-success
+                                            {% elif review.time_score == 3 %}
+                                                bg-warning
+                                            {% else %}
+                                                bg-danger
+                                            {% endif %}"
+                                            style="width: {% widthratio review.time_score 5 100 %}%"
+                                            role="progressbar"
+                                            aria-valuenow="{{ review.time_score }}"
+                                            aria-valuemin="0"
+                                            aria-valuemax="5">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Review text -->
+                                <p class="mb-2">{{ review.review_text }}</p>
+
+                                <!-- Reviewer information -->
+                                <small class="text-muted">
+                                    {{ review.review_user.username }}
+                                    talking about
+                                    {{ review.review_professor.professor_name }}
+                                </small>
+
+                            </div>
+                        </div>
+                    </a>
                 </div>
-            {% empty %}
-                <p class="text-start">No reviews yet.</p>
-            {% endfor %}
 
-        </div>
+            {% endif %}
+        {% empty %}
+            <div class="col-12">
+                <p class="text-muted">No reviews yet.</p>
+            </div>
+        {% endfor %}
+
     </div>
 </div>
 

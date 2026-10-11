@@ -3,158 +3,401 @@
 {% load static %}
 
 {% block content %}
-<section class="hero min-vh-100 d-flex align-items-center text-center text-grey position-relative">
 
-    <div class="container-fluid h-100">
-        <div class="row h-100 align-items-center">
+<!-- MAIN PAGE -->
+<div class="bg-light min-vh-100">
 
-            <!-- LEFT SIDE -->
-            <div class="col-6">
+    <!-- HERO SECTION -->
+    <section class="bg-dark text-white border-bottom border-dark py-5">
 
-                <h1 class="display-2 fw-bold mb-4">
-                    Find a review
-                </h1>
+        <div class="container">
 
-                <form action="{% url 'search' %}" method="GET"
-                      class="d-flex justify-content-center gap-2">
+            <div class="row align-items-end">
 
-                    <input
-                        type="text"
-                        name="query"
-                        class="form-control form-control-lg"
-                        placeholder="Search for a class..."
-                    >
+                <div class="col-lg-8">
 
-                    <button type="submit" class="btn btn-dark btn-lg">
-                        <i class="bi bi-search"></i> Search
-                    </button>
+                    <p class="text-uppercase fw-bold small mb-3">
+                        UWM // Student Community
+                    </p>
 
-                </form>
+                    <h1 class="display-4 fw-bold mb-3">
+                        Find the class.
+                        <br>
+                        <span class="text-secondary">
+                            Know the experience.
+                        </span>
+                    </h1>
 
-            </div>
+                    <p class="lead text-secondary mb-0">
+                        Real student reviews. Real course experiences.
+                        No guessing what you're signing up for.
+                    </p>
 
-            <!-- RIGHT SIDE -->
-            <div class="col-6">
-                <p class="lead mb-4">
-                    Log in and generate a class load estimate
-                    for your enrolled courses.
-                </p>
-
-                <a href="#" class="btn btn-outline-dark btn-lg">
-                    Learn More
-                </a>
+                </div>
 
             </div>
 
         </div>
-    </div>
 
-    <!-- DOWN ARROW -->
-    <div class="position-absolute bottom-0 start-50 translate-middle-x mb-4">
-        <i class="bi bi-arrow-down fs-2"></i>
-    </div>
+    </section>
 
-</section>
 
-<!-- Recent Reviews -->
-<div class="container py-4">
-    <h1 class="mb-4">Recent Reviews</h1>
+    <!-- MAIN LAYOUT -->
+    <div class="container-fluid">
 
-    <!-- Two reviews per row on medium and larger screens -->
-    <div class="row g-4">
+        <div class="row">
 
-        {% for review in recent_reviews %}
-            {% if review.review_course %}
+            <!-- LEFT SIDEBAR -->
+            <aside class="col-lg-2 d-none d-lg-block bg-white border-end">
 
-                <div class="col-12 col-md-6">
-                    <a href="{% url 'course_detail' review.review_course.id %}"
-                       class="text-decoration-none text-reset d-block h-100">
+                <div class="position-sticky top-0 py-4">
 
-                        <div class="card shadow-sm h-100">
+                    <p class="text-uppercase fw-bold text-muted small px-3 mb-2">
+                        Explore
+                    </p>
 
-                            <!-- Course name -->
-                            <div class="card-header">
-                                <strong>
-                                    {{ review.review_course.course_code }} -
-                                    {{ review.review_course.course_name }}
-                                </strong>
-                            </div>
+                    <div class="list-group list-group-flush">
 
-                            <div class="card-body">
+                        <a href="{% url 'review' %}"
+                           class="list-group-item list-group-item-action border-0 fw-semibold">
 
-                                <!-- Difficulty bar -->
-                                <div class="mb-3">
-                                    <div class="d-flex justify-content-between mb-1">
-                                        <strong>Difficulty</strong>
-                                        <span>{{ review.difficulty_score }}/5</span>
-                                    </div>
+                            <i class="bi bi-plus-square me-2"></i>
+                            Leave a Review
 
-                                    <div class="progress">
-                                        <div class="progress-bar
-                                            {% if review.difficulty_score <= 2 %}
-                                                bg-success
-                                            {% elif review.difficulty_score == 3 %}
-                                                bg-warning
-                                            {% else %}
-                                                bg-danger
-                                            {% endif %}"
-                                            style="width: {% widthratio review.difficulty_score 5 100 %}%"
-                                            role="progressbar"
-                                            aria-valuenow="{{ review.difficulty_score }}"
-                                            aria-valuemin="0"
-                                            aria-valuemax="5">
-                                        </div>
-                                    </div>
-                                </div>
+                        </a>
 
-                                <!-- Time consumption bar -->
-                                <div class="mb-3">
-                                    <div class="d-flex justify-content-between mb-1">
-                                        <strong>Time Consumption</strong>
-                                        <span>{{ review.time_score }}/5</span>
-                                    </div>
+                        <a href="#"
+                           class="list-group-item list-group-item-action border-0 fw-semibold">
 
-                                    <div class="progress">
-                                        <div class="progress-bar
-                                            {% if review.time_score <= 2 %}
-                                                bg-success
-                                            {% elif review.time_score == 3 %}
-                                                bg-warning
-                                            {% else %}
-                                                bg-danger
-                                            {% endif %}"
-                                            style="width: {% widthratio review.time_score 5 100 %}%"
-                                            role="progressbar"
-                                            aria-valuenow="{{ review.time_score }}"
-                                            aria-valuemin="0"
-                                            aria-valuemax="5">
-                                        </div>
-                                    </div>
-                                </div>
+                            <i class="bi bi-fire me-2"></i>
+                            Popular
 
-                                <!-- Review text -->
-                                <p class="mb-2">{{ review.review_text }}</p>
+                        </a>
 
-                                <!-- Reviewer information -->
-                                <small class="text-muted">
-                                    {{ review.review_user.username }}
-                                    talking about
-                                    {{ review.review_professor.professor_name }}
-                                </small>
+                    </div>
 
-                            </div>
-                        </div>
-                    </a>
+                    <div class="px-3 mt-5">
+
+                        <p class="text-uppercase fw-bold text-muted small">
+                            About
+                        </p>
+
+                        <p class="small text-muted">
+                            ClassReview is a student-powered space for
+                            talking honestly about classes, professors,
+                            and workload at UW-Milwaukee.
+                        </p>
+
+                        <a href="{% url 'about' %}"
+                           class="fw-bold text-dark text-decoration-none">
+
+                            Learn more →
+
+                        </a>
+
+                    </div>
+
                 </div>
 
-            {% endif %}
-        {% empty %}
-            <div class="col-12">
-                <p class="text-muted">No reviews yet.</p>
-            </div>
-        {% endfor %}
+            </aside>
+
+
+            <!-- MAIN FEED -->
+            <main class="col-lg-7">
+
+                <div class="py-4 px-lg-4">
+
+                    <!-- FEED HEADER -->
+                    <div class="d-flex justify-content-between align-items-end border-bottom border-dark pb-3 mb-3">
+
+                        <div>
+
+                            <p class="text-uppercase fw-bold small mb-1">
+                                Community
+                            </p>
+
+                            <h2 class="display-6 fw-bold mb-0">
+                                The Latest
+                            </h2>
+
+                        </div>
+
+                        <button class="btn btn-outline-dark btn-sm fw-semibold">
+                            <i class="bi bi-sliders me-1"></i>
+                            Filter
+                        </button>
+
+                    </div>
+
+
+                    <!-- RECENT REVIEWS GRID -->
+                    <div class="row g-3">
+
+                        {% for review in recent_reviews %}
+
+                            {% if review.review_course %}
+
+                                <!-- Two reviews per row -->
+                                <div class="col-12 col-md-6">
+
+                                    <a href="{% url 'course_detail' review.review_course.id %}"
+                                       class="text-decoration-none text-reset d-block h-100">
+
+                                        <article class="card h-100 shadow-sm">
+
+                                            <!-- Course Header -->
+                                            <div class="card-header">
+
+                                                <strong>
+                                                    {{ review.review_course.course_code }}
+                                                </strong>
+
+                                                <div class="small mt-1">
+                                                    {{ review.review_course.course_name }}
+                                                </div>
+
+                                            </div>
+
+
+                                            <div class="card-body">
+
+                                                <!-- Reviewer -->
+                                                <p class="text-muted small mb-3">
+                                                    <i class="bi bi-person-circle me-1"></i>
+                                                    {{ review.review_user.username }}
+                                                </p>
+
+
+                                                <!-- Difficulty Bar -->
+                                                <div class="mb-3">
+
+                                                    <div class="d-flex justify-content-between mb-1">
+
+                                                        <strong class="small">
+                                                            Difficulty
+                                                        </strong>
+
+                                                        <span class="small">
+                                                            {{ review.difficulty_score }}/5
+                                                        </span>
+
+                                                    </div>
+
+                                                    <div class="progress">
+
+                                                        <div class="progress-bar
+                                                            {% if review.difficulty_score <= 2 %}
+                                                                bg-success
+                                                            {% elif review.difficulty_score == 3 %}
+                                                                bg-warning
+                                                            {% else %}
+                                                                bg-danger
+                                                            {% endif %}"
+
+                                                            style="width: {% widthratio review.difficulty_score 5 100 %}%"
+
+                                                            role="progressbar"
+                                                            aria-valuenow="{{ review.difficulty_score }}"
+                                                            aria-valuemin="0"
+                                                            aria-valuemax="5">
+                                                        </div>
+
+                                                    </div>
+
+                                                </div>
+
+
+                                                <!-- Time Consumption Bar -->
+                                                <div class="mb-3">
+
+                                                    <div class="d-flex justify-content-between mb-1">
+
+                                                        <strong class="small">
+                                                            Time Consumption
+                                                        </strong>
+
+                                                        <span class="small">
+                                                            {{ review.time_score }}/5
+                                                        </span>
+
+                                                    </div>
+
+                                                    <div class="progress">
+
+                                                        <div class="progress-bar
+                                                            {% if review.time_score <= 2 %}
+                                                                bg-success
+                                                            {% elif review.time_score == 3 %}
+                                                                bg-warning
+                                                            {% else %}
+                                                                bg-danger
+                                                            {% endif %}"
+
+                                                            style="width: {% widthratio review.time_score 5 100 %}%"
+
+                                                            role="progressbar"
+                                                            aria-valuenow="{{ review.time_score }}"
+                                                            aria-valuemin="0"
+                                                            aria-valuemax="5">
+                                                        </div>
+
+                                                    </div>
+
+                                                </div>
+
+
+                                                <!-- Review Text -->
+                                                <p class="mb-3">
+                                                    {{ review.review_text }}
+                                                </p>
+
+
+                                                <!-- Professor -->
+                                                <p class="small text-muted mb-0">
+
+                                                    <i class="bi bi-person-badge me-1"></i>
+
+                                                    Professor:
+                                                    <strong>
+                                                        {{ review.review_professor.professor_name }}
+                                                    </strong>
+
+                                                </p>
+
+                                            </div>
+
+
+                                            <!-- Card Footer -->
+                                            <div class="card-footer bg-white text-end">
+
+                                                <span class="small fw-semibold text-dark">
+                                                    Read Course Reviews →
+                                                </span>
+
+                                            </div>
+
+                                        </article>
+
+                                    </a>
+
+                                </div>
+
+                            {% endif %}
+
+                        {% empty %}
+
+                            <!-- No Reviews -->
+                            <div class="col-12">
+
+                                <div class="bg-white border border-dark p-5 text-center">
+
+                                    <i class="bi bi-chat-square-text display-5"></i>
+
+                                    <h3 class="fw-bold mt-3">
+                                        It's quiet in here.
+                                    </h3>
+
+                                    <p class="text-muted">
+                                        Be the first person to start the conversation.
+                                    </p>
+
+                                    <a href="{% url 'review' %}"
+                                       class="btn btn-dark fw-bold">
+
+                                        Start a Review
+
+                                    </a>
+
+                                </div>
+
+                            </div>
+
+                        {% endfor %}
+
+                    </div>
+
+                </div>
+
+            </main>
+
+
+            <!-- RIGHT SIDEBAR -->
+            <aside class="col-lg-3 d-none d-lg-block">
+
+                <div class="py-4 pe-lg-4">
+
+                    <!-- COURSE LOAD CALCULATOR -->
+                    <div class="bg-dark text-white p-4 mb-3">
+
+                        <p class="text-uppercase small fw-bold text-secondary mb-2">
+                            Your schedule
+                        </p>
+
+                        <h4 class="fw-bold">
+                            How heavy is your semester?
+                        </h4>
+
+                        <p class="text-secondary small">
+                            Estimate your course load before
+                            you commit.
+                        </p>
+
+                        <a href="#"
+                           class="btn btn-light w-100 fw-bold">
+
+                            <i class="bi bi-calculator me-2"></i>
+                            Calculate
+
+                        </a>
+
+                    </div>
+
+
+                    <!-- TRENDING COURSES -->
+                    <div class="bg-white border border-dark p-4 mb-3">
+
+                        <p class="text-uppercase fw-bold small mb-3">
+                            Trending
+                        </p>
+
+                        <div class="d-flex justify-content-between border-bottom py-2">
+
+                            <span class="fw-semibold">CS 351</span>
+                            <span class="text-muted small">→</span>
+
+                        </div>
+
+                        <div class="d-flex justify-content-between border-bottom py-2">
+
+                            <span class="fw-semibold">CS 361</span>
+                            <span class="text-muted small">→</span>
+
+                        </div>
+
+                        <div class="d-flex justify-content-between border-bottom py-2">
+
+                            <span class="fw-semibold">CS 337</span>
+                            <span class="text-muted small">→</span>
+
+                        </div>
+
+                        <div class="d-flex justify-content-between py-2">
+
+                            <span class="fw-semibold">BIO 102</span>
+                            <span class="text-muted small">→</span>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </aside>
+
+        </div>
 
     </div>
+
 </div>
 
 {% endblock %}

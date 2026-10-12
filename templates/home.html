@@ -7,9 +7,7 @@
 <!-- MAIN PAGE -->
 <div class="bg-light min-vh-100">
 
-
-    <!-- ================= HERO ================= -->
-
+    <!-- HERO SECTION -->
     <section class="bg-dark text-white border-bottom border-dark py-5">
 
         <div class="container">
@@ -37,8 +35,6 @@
 
                 </div>
 
-
-
             </div>
 
         </div>
@@ -46,16 +42,12 @@
     </section>
 
 
-
-    <!-- ================= MAIN LAYOUT ================= -->
-
+    <!-- MAIN LAYOUT -->
     <div class="container-fluid">
 
         <div class="row">
 
-
-            <!-- ================= LEFT SIDEBAR ================= -->
-
+            <!-- LEFT SIDEBAR -->
             <aside class="col-lg-2 d-none d-lg-block bg-white border-end">
 
                 <div class="position-sticky top-0 py-4">
@@ -65,6 +57,7 @@
                     </p>
 
                     <div class="list-group list-group-flush">
+
                         <a href="{% url 'review' %}"
                            class="list-group-item list-group-item-action border-0 fw-semibold">
 
@@ -72,7 +65,6 @@
                             Leave a Review
 
                         </a>
-
 
                         <a href="#"
                            class="list-group-item list-group-item-action border-0 fw-semibold">
@@ -84,7 +76,6 @@
 
                     </div>
 
-
                     <div class="px-3 mt-5">
 
                         <p class="text-uppercase fw-bold text-muted small">
@@ -92,9 +83,12 @@
                         </p>
 
                         <p class="small text-muted">
-                            ClassReview is a student-powered space for talking honestly about classes, professors, and workload at UW-Milwaukee.
+                            ClassReview is a student-powered space for
+                            talking honestly about classes, professors,
+                            and workload at UW-Milwaukee.
                         </p>
-                         <a href="{% url 'about' %}"
+
+                        <a href="{% url 'about' %}"
                            class="fw-bold text-dark text-decoration-none">
 
                             Learn more →
@@ -108,16 +102,12 @@
             </aside>
 
 
-
-            <!-- ================= MAIN FEED ================= -->
-
+            <!-- MAIN FEED -->
             <main class="col-lg-7">
 
                 <div class="py-4 px-lg-4">
 
-
                     <!-- FEED HEADER -->
-
                     <div class="d-flex justify-content-between align-items-end border-bottom border-dark pb-3 mb-3">
 
                         <div>
@@ -132,176 +122,211 @@
 
                         </div>
 
-
                         <button class="btn btn-outline-dark btn-sm fw-semibold">
-
                             <i class="bi bi-sliders me-1"></i>
                             Filter
-
                         </button>
 
                     </div>
 
 
+                    <!-- RECENT REVIEWS GRID -->
+                    <div class="row g-3">
 
-                    <!-- ================= REVIEWS ================= -->
+                        {% for review in recent_reviews %}
 
-                    {% for review in recent_reviews %}
+                            {% if review.review_course %}
+
+                                <!-- Two reviews per row -->
+                                <div class="col-12 col-md-6">
+
+                                    <a href="{% url 'course_detail' review.review_course.id %}"
+                                       class="text-decoration-none text-reset d-block h-100">
+
+                                        <article class="card h-100 shadow-sm">
+
+                                            <!-- Course Header -->
+                                            <div class="card-header">
+
+                                                <strong>
+                                                    {{ review.review_course.course_code }}
+                                                </strong>
+
+                                                <div class="small mt-1">
+                                                    {{ review.review_course.course_name }}
+                                                </div>
+
+                                            </div>
 
 
-                    <article class="bg-white border border-dark mb-3">
+                                            <div class="card-body">
+
+                                                <!-- Reviewer -->
+                                                <p class="text-muted small mb-3">
+                                                    <i class="bi bi-person-circle me-1"></i>
+                                                    {{ review.review_user.username }}
+                                                </p>
 
 
-                        <!-- POST TOP -->
+                                                <!-- Difficulty Bar -->
+                                                <div class="mb-3">
 
-                        <div class="px-4 pt-4">
+                                                    <div class="d-flex justify-content-between mb-1">
 
-                            <div class="d-flex justify-content-between align-items-start">
+                                                        <strong class="small">
+                                                            Difficulty
+                                                        </strong>
 
-                                <div>
+                                                        <span class="small">
+                                                            {{ review.difficulty_score }}/5
+                                                        </span>
 
-                                    <span class="badge bg-dark rounded-0 px-2 py-1">
-                                        {{ review.review_course.course_code }}
-                                    </span>
+                                                    </div>
 
-                                    <span class="small fw-semibold ms-2">
-                                        {{ review.review_course.course_name }}
-                                    </span>
+                                                    <div class="progress">
+
+                                                        <div class="progress-bar
+                                                            {% if review.difficulty_score <= 2 %}
+                                                                bg-success
+                                                            {% elif review.difficulty_score == 3 %}
+                                                                bg-warning
+                                                            {% else %}
+                                                                bg-danger
+                                                            {% endif %}"
+
+                                                            style="width: {% widthratio review.difficulty_score 5 100 %}%"
+
+                                                            role="progressbar"
+                                                            aria-valuenow="{{ review.difficulty_score }}"
+                                                            aria-valuemin="0"
+                                                            aria-valuemax="5">
+                                                        </div>
+
+                                                    </div>
+
+                                                </div>
+
+
+                                                <!-- Time Consumption Bar -->
+                                                <div class="mb-3">
+
+                                                    <div class="d-flex justify-content-between mb-1">
+
+                                                        <strong class="small">
+                                                            Time Consumption
+                                                        </strong>
+
+                                                        <span class="small">
+                                                            {{ review.time_score }}/5
+                                                        </span>
+
+                                                    </div>
+
+                                                    <div class="progress">
+
+                                                        <div class="progress-bar
+                                                            {% if review.time_score <= 2 %}
+                                                                bg-success
+                                                            {% elif review.time_score == 3 %}
+                                                                bg-warning
+                                                            {% else %}
+                                                                bg-danger
+                                                            {% endif %}"
+
+                                                            style="width: {% widthratio review.time_score 5 100 %}%"
+
+                                                            role="progressbar"
+                                                            aria-valuenow="{{ review.time_score }}"
+                                                            aria-valuemin="0"
+                                                            aria-valuemax="5">
+                                                        </div>
+
+                                                    </div>
+
+                                                </div>
+
+
+                                                <!-- Review Text -->
+                                                <p class="mb-3">
+                                                    {{ review.review_text }}
+                                                </p>
+
+
+                                                <!-- Professor -->
+                                                <p class="small text-muted mb-0">
+
+                                                    <i class="bi bi-person-badge me-1"></i>
+
+                                                    Professor:
+                                                    <strong>
+                                                        {{ review.review_professor.professor_name }}
+                                                    </strong>
+
+                                                </p>
+
+                                            </div>
+
+
+                                            <!-- Card Footer -->
+                                            <div class="card-footer bg-white text-end">
+
+                                                <span class="small fw-semibold text-dark">
+                                                    Read Course Reviews →
+                                                </span>
+
+                                            </div>
+
+                                        </article>
+
+                                    </a>
 
                                 </div>
 
+                            {% endif %}
 
-                                <span class="text-uppercase text-muted small fw-semibold">
-                                    {{ review.review_user.username }}
-                                </span>
+                        {% empty %}
 
-                            </div>
+                            <!-- No Reviews -->
+                            <div class="col-12">
 
-                        </div>
+                                <div class="bg-white border border-dark p-5 text-center">
 
+                                    <i class="bi bi-chat-square-text display-5"></i>
 
+                                    <h3 class="fw-bold mt-3">
+                                        It's quiet in here.
+                                    </h3>
 
-                        <!-- POST -->
+                                    <p class="text-muted">
+                                        Be the first person to start the conversation.
+                                    </p>
 
-                        <div class="px-4 py-4">
+                                    <a href="{% url 'review' %}"
+                                       class="btn btn-dark fw-bold">
 
-                            <p class="text-uppercase text-muted small fw-bold mb-2">
-                                Student Review
-                            </p>
+                                        Start a Review
 
-
-                            <h3 class="fw-bold mb-3">
-                                {{ review.review_course.course_name }}
-                            </h3>
-
-
-                            <p class="fs-5 mb-4">
-                                "{{ review.review_text }}"
-                            </p>
-
-
-                            <div class="d-flex align-items-center gap-2">
-
-                                <i class="bi bi-person-badge"></i>
-
-                                <span class="small">
-                                    Professor
-                                </span>
-
-                                <strong class="small">
-                                    {{ review.review_professor.professor_name }}
-                                </strong>
-
-                            </div>
-
-                        </div>
-
-
-
-                        <!-- POST FOOTER -->
-
-                        <div class="border-top border-dark px-4 py-2">
-
-                            <div class="d-flex justify-content-between align-items-center">
-
-                                <div class="d-flex gap-2">
-
-                                    <button class="btn btn-sm btn-light fw-semibold">
-
-                                        <i class="bi bi-hand-thumbs-up me-1"></i>
-                                        Helpful
-
-                                    </button>
-
-
-                                    <button class="btn btn-sm btn-light fw-semibold">
-
-                                        <i class="bi bi-chat me-1"></i>
-                                        Discuss
-
-                                    </button>
+                                    </a>
 
                                 </div>
 
-
-                                <button class="btn btn-sm btn-outline-dark fw-semibold">
-
-                                    Read →
-
-                                </button>
-
                             </div>
 
-                        </div>
-
-
-                    </article>
-
-
-                    {% empty %}
-
-
-                    <!-- EMPTY STATE -->
-
-                    <div class="bg-white border border-dark p-5 text-center">
-
-                        <i class="bi bi-chat-square-text display-5"></i>
-
-                        <h3 class="fw-bold mt-3">
-                            It's quiet in here.
-                        </h3>
-
-                        <p class="text-muted">
-                            Be the first person to start the conversation.
-                        </p>
-
-                        <a href="{% url 'review' %}"
-                           class="btn btn-dark fw-bold">
-
-                            Start a Review
-
-                        </a>
+                        {% endfor %}
 
                     </div>
-
-
-                    {% endfor %}
 
                 </div>
 
             </main>
 
 
-
-            <!-- ================= RIGHT SIDEBAR ================= -->
-
+            <!-- RIGHT SIDEBAR -->
             <aside class="col-lg-3 d-none d-lg-block">
 
                 <div class="py-4 pe-lg-4">
 
-
-                    <!-- START HERE -->
-
+                    <!-- COURSE LOAD CALCULATOR -->
                     <div class="bg-dark text-white p-4 mb-3">
 
                         <p class="text-uppercase small fw-bold text-secondary mb-2">
@@ -328,74 +353,42 @@
                     </div>
 
 
-
-                    <!-- POPULAR -->
-
+                    <!-- TRENDING COURSES -->
                     <div class="bg-white border border-dark p-4 mb-3">
 
                         <p class="text-uppercase fw-bold small mb-3">
                             Trending
                         </p>
 
-
                         <div class="d-flex justify-content-between border-bottom py-2">
 
-                            <span class="fw-semibold">
-                                CS 351
-                            </span>
-
-                            <span class="text-muted small">
-                                →
-                            </span>
+                            <span class="fw-semibold">CS 351</span>
+                            <span class="text-muted small">→</span>
 
                         </div>
 
-
                         <div class="d-flex justify-content-between border-bottom py-2">
 
-                            <span class="fw-semibold">
-                                CS 361
-                            </span>
-
-                            <span class="text-muted small">
-                                →
-                            </span>
+                            <span class="fw-semibold">CS 361</span>
+                            <span class="text-muted small">→</span>
 
                         </div>
 
-
                         <div class="d-flex justify-content-between border-bottom py-2">
 
-                            <span class="fw-semibold">
-                                CS 337
-                            </span>
-
-                            <span class="text-muted small">
-                                →
-                            </span>
+                            <span class="fw-semibold">CS 337</span>
+                            <span class="text-muted small">→</span>
 
                         </div>
-
 
                         <div class="d-flex justify-content-between py-2">
 
-                            <span class="fw-semibold">
-                                BIO 102
-                            </span>
-
-                            <span class="text-muted small">
-                                →
-                            </span>
+                            <span class="fw-semibold">BIO 102</span>
+                            <span class="text-muted small">→</span>
 
                         </div>
 
                     </div>
-
-
-
-                    <!-- ABOUT -->
-
-
 
                 </div>
 
@@ -408,4 +401,3 @@
 </div>
 
 {% endblock %}
-

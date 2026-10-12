@@ -1,8 +1,11 @@
+
 {% extends "base.html" %}
 
 {% block title %}{{ course.course_code }}{% endblock %}
 
 {% block content %}
+
+<div class="container py-4">
 
 <div class="mb-4">
     <a href="{% url 'search' %}" class="btn btn-outline-secondary btn-sm">
@@ -32,6 +35,7 @@
         </div>
     </div>
 </section>
+
 <section class="mb-4">
     <h2 class="h5">Course Description</h2>
     {% if course.course_details %}
@@ -40,6 +44,7 @@
         <p class="text-muted mb-0">No description available for this course.</p>
     {% endif %}
 </section>
+
 <section class="row g-3 mb-4">
     <div class="col-md-4">
         <div class="border rounded p-3 h-100">
@@ -92,9 +97,54 @@
                     <p class="text-muted mb-0">{{ review.review_date }}</p>
                 </div>
 
-                <div class="d-flex flex-wrap gap-2 mb-3">
-                    <span class="badge bg-secondary">Difficulty {{ review.difficulty_score }}/5</span>
-                    <span class="badge bg-secondary">Time {{ review.time_score }}/5</span>
+                <!-- Difficulty rating bar -->
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <strong>Difficulty</strong>
+                        <span>{{ review.difficulty_score }}/5</span>
+                    </div>
+
+                    <div class="progress">
+                        <div class="progress-bar
+                            {% if review.difficulty_score <= 2 %}
+                                bg-success
+                            {% elif review.difficulty_score == 3 %}
+                                bg-warning
+                            {% else %}
+                                bg-danger
+                            {% endif %}"
+                            role="progressbar"
+                            style="width: {% widthratio review.difficulty_score 5 100 %}%"
+                            aria-valuenow="{{ review.difficulty_score }}"
+                            aria-valuemin="0"
+                            aria-valuemax="5">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Time consumption rating bar -->
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <strong>Time Consumption</strong>
+                        <span>{{ review.time_score }}/5</span>
+                    </div>
+
+                    <div class="progress">
+                        <div class="progress-bar
+                            {% if review.time_score <= 2 %}
+                                bg-success
+                            {% elif review.time_score == 3 %}
+                                bg-warning
+                            {% else %}
+                                bg-danger
+                            {% endif %}"
+                            role="progressbar"
+                            style="width: {% widthratio review.time_score 5 100 %}%"
+                            aria-valuenow="{{ review.time_score }}"
+                            aria-valuemin="0"
+                            aria-valuemax="5">
+                        </div>
+                    </div>
                 </div>
 
                 <p class="mb-0">{{ review.review_text }}</p>

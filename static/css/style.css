@@ -1,0 +1,61 @@
+
+/* UWM color scheme */
+:root {
+    --uwm-gold: #FFBD00;
+    --uwm-black: #111111;
+    --uwm-light: #F5F5F5;
+}
+
+/* Overall website */
+body {
+    background-color: var(--uwm-light);
+    color: var(--uwm-black);
+}
+
+/* Navigation bar */
+.navbar.bg-dark {
+    background-color: var(--uwm-black) !important;
+}
+
+.navbar-brand {
+    color: var(--uwm-gold) !important;
+    font-weight: bold;
+}
+
+.navbar-dark .navbar-nav .nav-link {
+    color: white;
+}
+
+.navbar-dark .navbar-nav .nav-link:hover {
+    color: var(--uwm-gold);
+}
+
+/* Primary buttons */
+.btn-primary {
+    background-color: var(--uwm-gold);
+    border-color: var(--uwm-gold);
+    color: var(--uwm-black);
+}
+
+.btn-primary:hover {
+    background-color: #E5AA00;
+    border-color: #E5AA00;
+    color: var(--uwm-black);
+}
+
+/* Review cards and other cards */
+.card {
+    border-color: #DDDDDD;
+}
+
+.card-header {
+    background-color: var(--uwm-gold);
+    color: var(--uwm-black);
+}
+
+/* Form focus */
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--uwm-gold);
+    box-shadow: 0 0 0 0.2rem rgba(255, 189, 0, 0.25);
+}

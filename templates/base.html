@@ -62,6 +62,11 @@
                             Courses
                         </a>
                     </li>
+                     <li class="nav-item">
+                        <a class="nav-link" href="{% url 'review_page' %}">
+                            Reviews
+                        </a>
+                    </li>
 
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'review' %}">
@@ -82,26 +87,6 @@
                     </li>
 
                 </ul>
-
-                <!-- Search Bar -->
-                <form action="{% url 'search' %}" method="GET"
-                      class="d-flex my-3 my-xl-0 me-xl-3">
-
-                    <div class="input-group">
-                        <input
-                            type="text"
-                            name="query"
-                            class="form-control"
-                            placeholder="Search for a class..."
-                            aria-label="Search for a class"
-                        >
-
-                        <button class="btn btn-warning" type="submit">
-                            <i class="bi bi-search"></i>
-                        </button>
-                    </div>
-
-                </form>
 
                 <!-- Account Controls -->
                 <ul class="navbar-nav align-items-xl-center">

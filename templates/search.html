@@ -7,11 +7,12 @@
 
 <div class="container py-4">
 
-    <h1 class="mb-3">Find a Course</h1>
-    <p class="text-muted">Search by course code, name, or professor.</p>
+    <h1 class="mb-1">Find a Course</h1>
+    <p class="text-muted mb-4">Search by course code, name, or professor.</p>
 
+    <!-- Main Search Bar (Full Width Top) -->
     <form method="GET" action="{% url 'search' %}" class="mb-4">
-        <div class="input-group input-group-lg">
+        <div class="input-group input-group-lg shadow-sm">
             <input
                 type="text"
                 name="query"
@@ -20,26 +21,114 @@
                 autocomplete="off"
                 value="{{ query }}"
             >
-            <button class="btn btn-primary" type="submit">
+            <!-- Preserve active filter values when using the main search bar -->
+            <input type="hidden" name="department" value="{{ selected_department }}">
+            <input type="hidden" name="professor" value="{{ selected_professor }}">
+            <input type="hidden" name="credits" value="{{ selected_credits }}">
+            <input type="hidden" name="difficulty" value="{{ selected_difficulty }}">
+
+            <button class="btn btn-primary px-4" type="submit">
                 <i class="bi bi-search"></i> Search
             </button>
         </div>
     </form>
 
-    {% if courses %}
-        <p class="text-muted small mb-2">
-            Showing {{ courses.start_index }}-{{ courses.end_index }}
-            of {{ paginator.count }} course{{ paginator.count|pluralize }}
-        </p>
+    <!-- Two-Column Layout: Sidebar Filters (Left) & Results (Right) -->
+    <div class="row">
+        <div class="float-right">
+<button class=" btn btn-outline-secondary w-50 mb-3 d-lg-none shadow-sm" type="button" data-bs-toggle="collapse" data-bs-target="#filterSidebar" aria-expanded="false" aria-controls="filterSidebar">
+                <i class="bi bi-funnel"></i> Filters {% if selected_department or selected_professor or selected_credits or selected_difficulty %}(Applied){% endif %}
+            </button>
+            </div>
+        <!-- Sidebar Filters -->
+        <div class="col-lg-3 mb-4 collapse d-lg-block" id="filterSidebar">
+            <form method="GET" action="{% url 'search' %}" class="card shadow-sm border-0 bg-light">
+                <div class="card-body">
+                    <h5 class="card-title fw-bold mb-3">
+                        <i class="bi bi-funnel"></i> Filter Courses
+                    </h5>
 
-        <div class="list-group">
-            {% include "_course_items.html" %}
+                    <!-- Preserve query if user changes filters -->
+                    <input type="hidden" name="query" value="{{ query }}">
+
+                    <!-- Department Filter -->
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-muted">Department</label>
+                        <select name="department" class="form-select form-select-sm">
+                            <option value="">All Departments</option>
+                            {% for dept in departments %}
+                                <option value="{{ dept }}" {% if selected_department == dept %}selected{% endif %}>{{ dept }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Professor Filter -->
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-muted">Professor</label>
+                        <select name="professor" class="form-select form-select-sm">
+                            <option value="">All Professors</option>
+                            {% for prof in professors %}
+                                <option value="{{ prof.id }}" {% if selected_professor == prof.id %}selected{% endif %}>{{ prof.professor_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Credits Filter -->
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-muted">Credits</label>
+                        <select name="credits" class="form-select form-select-sm">
+                            <option value="">Any Credits</option>
+                            {% for c in credit_options %}
+                                <option value="{{ c }}" {% if selected_credits == c|stringformat:"s" %}selected{% endif %}>{{ c }} Credits</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Difficulty Filter -->
+                    <div class="mb-4">
+                        <label class="form-label small fw-semibold text-muted">Difficulty</label>
+                        <select name="difficulty" class="form-select form-select-sm">
+                            <option value="">Any Difficulty</option>
+                            <option value="1" {% if selected_difficulty == "1" %}selected{% endif %}>1 - Easy</option>
+                            <option value="2" {% if selected_difficulty == "2" %}selected{% endif %}>2</option>
+                            <option value="3" {% if selected_difficulty == "3" %}selected{% endif %}>3 - Moderate</option>
+                            <option value="4" {% if selected_difficulty == "4" %}selected{% endif %}>4</option>
+                            <option value="5" {% if selected_difficulty == "5" %}selected{% endif %}>5 - Hard</option>
+                        </select>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-dark btn-sm">Apply Filters</button>
+                        <a href="{% url 'search' %}" class="btn btn-outline-secondary btn-sm">Reset All</a>
+                    </div>
+                </div>
+            </form>
         </div>
 
-        {% include "_pagination.html" %}
-    {% else %}
-        <p class="text-muted mt-3">No courses match your search.</p>
-    {% endif %}
+        <!-- Main Results Area -->
+        <div class="col-lg-9">
+            {% if courses %}
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <p class="text-muted small mb-0">
+                        Showing <strong>{{ courses.start_index }}-{{ courses.end_index }}</strong>
+                        of <strong>{{ paginator.count }}</strong> course{{ paginator.count|pluralize }}
+                    </p>
+                </div>
+
+                <div class="list-group shadow-sm mb-4">
+                    {% include "_course_items.html" %}
+                </div>
+
+                {% include "_pagination.html" %}
+            {% else %}
+                <div class="alert alert-light border text-center py-5">
+                    <p class="text-muted mb-0">No courses match your search or filter criteria.</p>
+                </div>
+            {% endif %}
+        </div>
+
+    </div>
 
 </div>
 

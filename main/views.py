@@ -85,8 +85,15 @@ COURSES_PER_PAGE = 20
 def search(request):
     """Render a paginated course list, optionally filtered by a search query."""
     query = request.GET.get('query', '').strip()
+    department = request.GET.get('department', '').strip()
+    professor_id = request.GET.get('professor', '').strip()
+    credits = request.GET.get('credits', '').strip()
+    difficulty = request.GET.get('difficulty', '').strip()
 
-    courses = Course.objects.prefetch_related('course_professors').order_by('course_code')
+    # Base queryset with annotations for average difficulty
+    courses = Course.objects.prefetch_related('course_professors').annotate(
+        avg_difficulty=Avg('review__difficulty_score')
+    ).order_by('course_code')
     if query:
         courses = courses.filter(
             Q(course_code__icontains=query) |
@@ -94,6 +101,24 @@ def search(request):
             Q(course_professors__professor_name__icontains=query)
         ).distinct()
 
+        # 2. Filter by Department (matching the prefix of course_code, e.g., "COMP SCI")
+    if department:
+        courses = courses.filter(course_code__icontains=department)
+
+        # 3. Filter by Professor ID
+    if professor_id:
+        courses = courses.filter(course_professors__id=professor_id)
+
+        # 4. Filter by Credits
+    if credits:
+        courses = courses.filter(course_credits=credits)
+
+        # 5. Filter by Difficulty (matching the bucket range, e.g., 3.0 to < 4.0)
+    if difficulty:
+        diff_float = float(difficulty)
+        courses = courses.filter(avg_difficulty__gte=diff_float, avg_difficulty__lt=diff_float + 1.0)
+
+        courses = courses.distinct()
     paginator = Paginator(courses, COURSES_PER_PAGE)
     # get_page handles bad/out-of-range page numbers gracefully
     page_obj = paginator.get_page(request.GET.get('page'))
@@ -103,12 +128,24 @@ def search(request):
         page_obj.number, on_each_side=2, on_ends=1
     )
 
+    # Data to populate dropdown filters in your HTML template
+    professors = Professor.objects.all().order_by('professor_name')
+    departments = sorted(
+        list(set([code.split(' ')[0] for code in Course.objects.values_list('course_code', flat=True)])))
+    credit_options = Course.objects.values_list('course_credits', flat=True).distinct().order_by('course_credits')
     return render(request, 'search.html', {
         'courses': page_obj,
         'page_obj': page_obj,
         'page_range': page_range,
         'paginator': paginator,
         'query': query,
+        'professors': professors,
+        'departments': departments,
+        'credit_options': credit_options,
+        'selected_department': department,
+        'selected_professor': int(professor_id) if professor_id else '',
+        'selected_credits': credits,
+        'selected_difficulty': difficulty,
     })
 def course_detail(request, course_id):
     """Render details, aggregate review scores, and reviews for one course."""
@@ -438,4 +475,45 @@ def my_profile(request):
     return render(request, 'my_profile.html', {
         'reviews': reviews,
         'username_error': username_error
+    })
+"""review page showing all reviews"""
+def review_page(request):
+    query = request.GET.get('q', '').strip()
+    sort_by = request.GET.get('sort', 'recent')
+
+    # Base queryset prefetching related models for efficiency
+    reviews = Review.objects.select_related(
+        'review_course',
+        'review_professor',
+        'review_user__user_major'
+    )
+
+    # 1. Search across review text, course code/name, professor name, and author username
+    if query:
+        reviews = reviews.filter(
+            Q(review_text__icontains=query) |
+            Q(review_course__course_code__icontains=query) |
+            Q(review_course__course_name__icontains=query) |
+            Q(review_professor__professor_name__icontains=query) |
+            Q(review_user__username__icontains=query)
+        )
+
+    # 2. Sorting options
+    if sort_by == 'oldest':
+        reviews = reviews.order_by('review_date', 'id')
+    elif sort_by == 'easiest':
+        reviews = reviews.order_by('difficulty_score', '-review_date')
+    elif sort_by == 'hardest':
+        reviews = reviews.order_by('-difficulty_score', '-review_date')
+    else:  # Default to most recent
+        reviews = reviews.order_by('-review_date', '-id')
+
+    # Paginate feed (e.g., 10 reviews per page)
+    paginator = Paginator(reviews, 10)
+    page_obj = paginator.get_page(request.GET.get('page'))
+
+    return render(request, 'reviewpage.html', {
+        'reviews': page_obj,
+        'query': query,
+        'sort_by': sort_by,
     })

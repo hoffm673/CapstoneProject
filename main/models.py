@@ -92,5 +92,7 @@ class User(AbstractUser):
         blank=True
     )
 
+    saved_courses = models.ManyToManyField(Course, blank=True, related_name='saved_by_users')
+
     def __str__(self):
         return self.username

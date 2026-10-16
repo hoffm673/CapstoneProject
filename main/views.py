@@ -48,12 +48,47 @@ def review(request):
         professor_id = request.POST.get('professor')
         difficulty_score = request.POST.get('difficulty_score')
         time_score = request.POST.get('time_score')
-        review_text = request.POST.get('review_text')
+        review_text = request.POST.get('review_text', '').strip()
 
-        # Retrieves a course object using the course ID
-        course = get_object_or_404(Course, pk=course_id)
-        # Retrieves the professor using the professor ID
-        professor = get_object_or_404(Professor, pk=professor_id)
+        try:
+            course = Course.objects.get(pk=course_id)
+            professor = Professor.objects.get(pk=professor_id)
+        except (Course.DoesNotExist, Professor.DoesNotExist, TypeError, ValueError):
+            return render(request, 'review.html', {
+                'courses': courses,
+                'professors': professors,
+                'error': 'Select a valid course and professor.',
+            })
+
+        if not course.course_professors.filter(pk=professor.pk).exists():
+            return render(request, 'review.html', {
+                'courses': courses,
+                'professors': professors,
+                'error': 'Select a professor who teaches the selected course.',
+            })
+
+        try:
+            difficulty_score = int(difficulty_score)
+            time_score = int(time_score)
+        except (TypeError, ValueError):
+            difficulty_score = time_score = None
+
+        if (
+            difficulty_score not in range(1, 6)
+            or time_score not in range(1, 6)
+        ):
+            return render(request, 'review.html', {
+                'courses': courses,
+                'professors': professors,
+                'error': 'Both ratings must be whole numbers from 1 to 5.',
+            })
+
+        if not review_text:
+            return render(request, 'review.html', {
+                'courses': courses,
+                'professors': professors,
+                'error': 'Review text cannot be blank.',
+            })
 
         # Creates a new Review object using the data collected from the form (POST)
         Review.objects.create(

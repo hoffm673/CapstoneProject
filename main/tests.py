@@ -106,50 +106,40 @@ class RegistrationTests(TestCase):
 
 
 class ReviewSubmissionTests(TestCase):
-    # Set up the test data needed to submit a review
     def setUp(self):
         self.user = User.objects.create_user(
             username="testuser",
-            password="testpassword"
+            password="TestPass123!"
         )
-
-        self.professor = Professor.objects.create(
-            professor_name="John Smith"
-        )
-
+        self.professor = Professor.objects.create(professor_name="John Smith")
         self.course = Course.objects.create(
             course_name="Introduction to Computer Science",
             course_code="COMP SCI 101",
             course_credits=3
         )
-
         self.course.course_professors.add(self.professor)
+        self.client.force_login(self.user)
 
-    # Test that a user who is not logged in cannot submit a review
+    def valid_review_data(self):
+        return {
+            "course": self.course.id,
+            "professor": self.professor.id,
+            "difficulty_score": 4,
+            "time_score": 5,
+            "review_text": "This was a challenging but useful course.",
+        }
+
     def test_successful_review_submission(self):
-        self.client.login(
-            username="testuser",
-            password="testpassword"
-        )
-
         response = self.client.post(
             reverse("review"),
-            {
-                "course": self.course.id,
-                "professor": self.professor.id,
-                "difficulty_score": 4,
-                "time_score": 5,
-                "review_text": "This was a challenging but useful course."
-            }
+            self.valid_review_data()
         )
 
         self.assertEqual(response.status_code, 302)
         self.assertRedirects(response, reverse("search"))
-
         self.assertEqual(Review.objects.count(), 1)
 
         review = Review.objects.first()
-
         self.assertEqual(review.review_user, self.user)
         self.assertEqual(review.review_course, self.course)
         self.assertEqual(review.review_professor, self.professor)
@@ -159,3 +149,50 @@ class ReviewSubmissionTests(TestCase):
             review.review_text,
             "This was a challenging but useful course."
         )
+
+    def test_rejects_ratings_outside_range_or_not_integers(self):
+        for field, value in (
+            ("difficulty_score", "0"),
+            ("difficulty_score", "6"),
+            ("difficulty_score", "easy"),
+            ("time_score", "-1"),
+            ("time_score", "5.5"),
+        ):
+            with self.subTest(field=field, value=value):
+                data = self.valid_review_data()
+                data[field] = value
+                response = self.client.post(reverse("review"), data)
+
+                self.assertEqual(response.status_code, 200)
+                self.assertContains(response, "Both ratings must be whole numbers")
+                self.assertEqual(Review.objects.count(), 0)
+
+    def test_rejects_blank_review_text(self):
+        data = self.valid_review_data()
+        data["review_text"] = " \n\t "
+        response = self.client.post(reverse("review"), data)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Review text cannot be blank")
+        self.assertEqual(Review.objects.count(), 0)
+
+    def test_rejects_professor_who_does_not_teach_course(self):
+        other_professor = Professor.objects.create(professor_name="Dr. Other")
+        data = self.valid_review_data()
+        data["professor"] = other_professor.id
+        response = self.client.post(reverse("review"), data)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "professor who teaches the selected course")
+        self.assertEqual(Review.objects.count(), 0)
+
+    def test_rejects_invalid_course_or_professor_ids(self):
+        for field in ("course", "professor"):
+            with self.subTest(field=field):
+                data = self.valid_review_data()
+                data[field] = "invalid"
+                response = self.client.post(reverse("review"), data)
+
+                self.assertEqual(response.status_code, 200)
+                self.assertContains(response, "Select a valid course and professor")
+                self.assertEqual(Review.objects.count(), 0)

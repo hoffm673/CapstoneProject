@@ -34,7 +34,27 @@
                     </p>
 
                 </div>
+                 <!-- Search Bar -->
+                <div class="w-50">
+                <form action="{% url 'search' %}" method="GET"
+                      class="d-flex my-3 my-xl-0 me-xl-3">
 
+                    <div class="input-group">
+                        <input
+                            type="text"
+                            name="query"
+                            class="form-control"
+                            placeholder="Search for a class..."
+                            aria-label="Search for a class"
+                        >
+
+                        <button class="btn btn-warning" type="submit">
+                            <i class="bi bi-search"></i>
+                        </button>
+                    </div>
+
+                </form>
+                    </div>
             </div>
 
         </div>

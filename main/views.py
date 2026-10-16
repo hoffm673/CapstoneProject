@@ -79,10 +79,13 @@ def logout_view(request):
     messages.success(request, "You have been logged out.")
     return redirect('home')
 
+# Number of courses shown per page on the search page (pick anything in the 15-20 range)
+COURSES_PER_PAGE = 20
+
 def search(request):
-    """Render the course list; serves further pages as JSON for infinite scroll."""
+    """Render a paginated course list, optionally filtered by a search query."""
     query = request.GET.get('query', '').strip()
-    COURSES_PER_PAGE = 20
+
     courses = Course.objects.prefetch_related('course_professors').order_by('course_code')
     if query:
         courses = courses.filter(
@@ -91,16 +94,20 @@ def search(request):
             Q(course_professors__professor_name__icontains=query)
         ).distinct()
 
-    page_obj = Paginator(courses, COURSES_PER_PAGE).get_page(request.GET.get('page'))
+    paginator = Paginator(courses, COURSES_PER_PAGE)
+    # get_page handles bad/out-of-range page numbers gracefully
+    page_obj = paginator.get_page(request.GET.get('page'))
 
-    # Scroll requests ask for just the next batch of course rows
-    if request.GET.get('partial') == '1':
-        html = render_to_string('_course_items.html', {'courses': page_obj}, request=request)
-        return JsonResponse({'html': html, 'has_next': page_obj.has_next()})
+    # Shows something like: 1 ... 4 5 [6] 7 8 ... 20
+    page_range = paginator.get_elided_page_range(
+        page_obj.number, on_each_side=2, on_ends=1
+    )
 
     return render(request, 'search.html', {
         'courses': page_obj,
-        'has_next': page_obj.has_next(),
+        'page_obj': page_obj,
+        'page_range': page_range,
+        'paginator': paginator,
         'query': query,
     })
 def course_detail(request, course_id):

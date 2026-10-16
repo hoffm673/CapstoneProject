@@ -5,115 +5,42 @@
 
 {% block content %}
 
-<div class="container">
+<div class="container py-4">
 
     <h1 class="mb-3">Find a Course</h1>
     <p class="text-muted">Search by course code, name, or professor.</p>
 
-    <div class="mb-4">
-        <input
-            type="text"
-            id="courseSearch"
-            class="form-control form-control-lg"
-            placeholder="Try 'COMP SCI 351' or 'Algorithm' or 'Dr. Joe'..."
-            autocomplete="off"
-            value="{{ query }}"
-        >
-    </div>
-
-    <div id="courseList" class="list-group">
-        {% include "_course_items.html" %}
-    </div>
-
-    <p id="noResults" class="text-muted mt-3" style="display: {% if courses %}none{% else %}block{% endif %};">
-        No courses match your search.
-    </p>
-
-    <div id="scrollSentinel" style="height: 1px;"></div>
-
-    <div id="loadingSpinner" class="text-center my-3" style="display: none;">
-        <div class="spinner-border text-secondary" role="status">
-            <span class="visually-hidden">Loading...</span>
+    <form method="GET" action="{% url 'search' %}" class="mb-4">
+        <div class="input-group input-group-lg">
+            <input
+                type="text"
+                name="query"
+                class="form-control"
+                placeholder="Try 'COMP SCI 351' or 'Algorithm' or 'Dr. Joe'..."
+                autocomplete="off"
+                value="{{ query }}"
+            >
+            <button class="btn btn-primary" type="submit">
+                <i class="bi bi-search"></i> Search
+            </button>
         </div>
-    </div>
+    </form>
+
+    {% if courses %}
+        <p class="text-muted small mb-2">
+            Showing {{ courses.start_index }}-{{ courses.end_index }}
+            of {{ paginator.count }} course{{ paginator.count|pluralize }}
+        </p>
+
+        <div class="list-group">
+            {% include "_course_items.html" %}
+        </div>
+
+        {% include "_pagination.html" %}
+    {% else %}
+        <p class="text-muted mt-3">No courses match your search.</p>
+    {% endif %}
 
 </div>
-
-<script>
-    const searchInput = document.getElementById('courseSearch');
-    const courseList = document.getElementById('courseList');
-    const noResults = document.getElementById('noResults');
-    const spinner = document.getElementById('loadingSpinner');
-    const sentinel = document.getElementById('scrollSentinel');
-
-    let nextPage = 2;
-    let hasNext = {{ has_next|yesno:"true,false" }};
-    let loading = false;
-    let requestId = 0;   // lets us ignore responses from outdated searches
-
-    async function fetchPage(page, query) {
-        const params = new URLSearchParams({ partial: '1', page: page, query: query });
-        const response = await fetch(`{% url 'search' %}?${params}`);
-        return response.json();
-    }
-
-    async function loadMore() {
-        if (loading || !hasNext) return;
-        loading = true;
-        const myRequest = requestId;
-        spinner.style.display = 'block';
-
-        try {
-            const data = await fetchPage(nextPage, searchInput.value.trim());
-            if (myRequest !== requestId) return;   // search changed mid-request
-            courseList.insertAdjacentHTML('beforeend', data.html);
-            hasNext = data.has_next;
-            nextPage++;
-        } catch (err) {
-            console.error('Failed to load courses', err);
-        } finally {
-            if (myRequest === requestId) {
-                loading = false;
-                spinner.style.display = 'none';
-            }
-        }
-    }
-
-    async function runSearch() {
-        requestId++;
-        const myRequest = requestId;
-        loading = true;
-        spinner.style.display = 'block';
-
-        try {
-            const data = await fetchPage(1, searchInput.value.trim());
-            if (myRequest !== requestId) return;
-            courseList.innerHTML = data.html;
-            hasNext = data.has_next;
-            nextPage = 2;
-            noResults.style.display = courseList.children.length === 0 ? 'block' : 'none';
-        } catch (err) {
-            console.error('Search failed', err);
-        } finally {
-            if (myRequest === requestId) {
-                loading = false;
-                spinner.style.display = 'none';
-            }
-        }
-    }
-
-    // Load the next batch when the sentinel is near the bottom of the viewport
-    const observer = new IntersectionObserver(function (entries) {
-        if (entries[0].isIntersecting) loadMore();
-    }, { rootMargin: '300px' });
-    observer.observe(sentinel);
-
-    // Debounce typing so we don't hit the server on every keystroke
-    let debounceTimer;
-    searchInput.addEventListener('input', function () {
-        clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(runSearch, 300);
-    });
-</script>
 
 {% endblock %}

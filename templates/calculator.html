@@ -1,0 +1,314 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Course Load Calculator{% endblock %}
+
+{% block content %}
+<div class="container py-3">
+
+    <div class="row mb-4">
+        <div class="col-12 text-center">
+            <h1 class="display-5 fw-bold">Course Load Calculator</h1>
+            <p class="lead text-muted">Add your semester courses below to calculate overall difficulty and time commitment.</p>
+        </div>
+    </div>
+
+    <!--Metrics, averages of credits, time, difficulty -->
+    <div class="row g-3 mb-4 text-center">
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0 bg-light">
+                <div class="card-body">
+                    <h6 class="text-muted text-uppercase fw-bold">Total Credits</h6>
+                    <h2 class="display-6 fw-bold text-primary mb-0" id="total-credits">0</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0 bg-light">
+                <div class="card-body">
+                    <h6 class="text-muted text-uppercase fw-bold">Avg Difficulty</h6>
+                    <h2 class="display-6 fw-bold text-warning mb-0"><span id="avg-difficulty">0.0</span> <small class="fs-6 text-muted">/ 5</small></h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0 bg-light">
+                <div class="card-body">
+                    <h6 class="text-muted text-uppercase fw-bold">Avg Time Commitment</h6>
+                    <h2 class="display-6 fw-bold text-info mb-0"><span id="avg-time">0.0</span> <small class="fs-6 text-muted">/ 5</small></h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Course Selector -->
+        <div class="col-lg-5">
+            <div class="card shadow-sm">
+                <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Find Courses</h5>
+                    <small class="text-light" id="results-count"></small>
+                </div>
+                <div class="card-body">
+                    <!-- Live Search Input -->
+                    <div class="input-group mb-3">
+                        <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                        <input type="text"
+                               id="course-search-input"
+                               class="form-control"
+                               placeholder="Search number, code, or name (e.g. 351, CS, Algorithm)..."
+                               autocomplete="off">
+                    </div>
+
+                    <!-- Course Results List -->
+                    <div id="course-results-list" class="list-group" style="max-height: 380px; overflow-y: auto;">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Current Schedule -->
+        <div class="col-lg-7">
+            <div class="card shadow-sm">
+                <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Your Selected Schedule</h5>
+                    <span class="badge bg-secondary" id="schedule-count">0 Courses</span>
+                </div>
+                <div class="card-body">
+                    <div id="empty-state" class="text-center py-5 text-muted">
+                        <p class="mb-0">No courses added yet. Search and add a course on the left to begin.</p>
+                    </div>
+
+                    <!-- Courses List Table -->
+                    <div class="table-responsive d-none" id="schedule-table-container">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Course</th>
+                                    <th class="text-center">Credits</th>
+                                    <th class="text-center">Difficulty</th>
+                                    <th class="text-center">Time</th>
+                                    <th class="text-center">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="schedule-table-body">
+                                <!-- Dynamic Rows Go Here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card-footer bg-white d-flex justify-content-between align-items-center">
+                    {% if user.is_authenticated %}
+                        <form method="POST" action="{% url 'calculator' %}" id="save-schedule-form">
+                            {% csrf_token %}
+                            <div id="hidden-inputs-container"></div>
+                            <button type="submit" class="btn btn-success" id="save-btn" disabled>
+                                <i class="bi bi-bookmark-check me-1"></i> Save Schedule to Account
+                            </button>
+                        </form>
+                    {% else %}
+                        <span class="text-muted small">
+                            <a href="{% url 'login' %}">Log in</a> to save this schedule to your account.
+                        </span>
+                    {% endif %}
+                    <button type="button" class="btn btn-outline-danger btn-sm" id="clear-all-btn" style="display: none;">
+                        Clear All
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // load course data into JavaScript
+    const allCourses = [
+        {% for c in courses %}
+        {
+            id: {{ c.id }},
+            code: "{{ c.course_code|escapejs }}",
+            name: "{{ c.course_name|escapejs }}",
+            credits: {{ c.course_credits }},
+            difficulty: {{ c.avg_difficulty|default_if_none:0|floatformat:1 }},
+            time: {{ c.avg_time|default_if_none:0|floatformat:1 }},
+            reviews: {{ c.review_count }}
+        }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+
+    const savedCourseIds = {{ saved_course_ids|safe }};
+    let schedule = [];
+
+    // DOM Elements
+    const searchInput = document.getElementById('course-search-input');
+    const resultsList = document.getElementById('course-results-list');
+    const resultsCount = document.getElementById('results-count');
+    const tableBody = document.getElementById('schedule-table-body');
+    const tableContainer = document.getElementById('schedule-table-container');
+    const emptyState = document.getElementById('empty-state');
+    const scheduleCount = document.getElementById('schedule-count');
+    const clearBtn = document.getElementById('clear-all-btn');
+    const saveBtn = document.getElementById('save-btn');
+    const hiddenInputs = document.getElementById('hidden-inputs-container');
+
+    const totalCreditsEl = document.getElementById('total-credits');
+    const avgDifficultyEl = document.getElementById('avg-difficulty');
+    const avgTimeEl = document.getElementById('avg-time');
+
+    // Render search results based input (currently very slow/awkward, will be worked on)
+    function renderSearchResults() {
+        const query = searchInput.value.trim().toLowerCase();
+        resultsList.innerHTML = '';
+
+        const filtered = allCourses.filter(c => {
+            return c.code.toLowerCase().includes(query) || c.name.toLowerCase().includes(query);
+        });
+
+        resultsCount.textContent = `${filtered.length} found`;
+
+        if (filtered.length === 0) {
+            resultsList.innerHTML = `
+                <div class="text-center text-muted py-4">
+                    <small>No courses found matching "${query}"</small>
+                </div>
+            `;
+            return;
+        }
+
+        filtered.forEach(c => {
+            const isAdded = schedule.some(item => item.id === c.id);
+            const item = document.createElement('div');
+            item.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center py-2 px-3';
+            item.innerHTML = `
+                <div class="me-2" style="overflow: hidden;">
+                    <div class="fw-bold text-truncate">${c.code}</div>
+                    <small class="text-muted text-truncate d-block">${c.name}</small>
+                    <small class="text-secondary">${c.credits} cr &bull; Diff: ${c.difficulty > 0 ? c.difficulty + '/5' : 'No ratings'}</small>
+                </div>
+                <button type="button" class="btn btn-sm ${isAdded ? 'btn-secondary' : 'btn-outline-primary'} flex-shrink-0"
+                        onclick="toggleCourse(${c.id})" ${isAdded ? 'disabled' : ''}>
+                    ${isAdded ? 'Added' : '<i class="bi bi-plus-lg"></i> Add'}
+                </button>
+            `;
+            resultsList.appendChild(item);
+        });
+    }
+
+    function toggleCourse(courseId) {
+        const course = allCourses.find(c => c.id === courseId);
+        if (!course) return;
+
+        if (!schedule.some(c => c.id === courseId)) {
+            schedule.push(course);
+            renderTable();
+            updateMetrics();
+            renderSearchResults();
+        }
+    }
+    //Functionality for removing course that user added
+    function removeCourse(courseId) {
+        schedule = schedule.filter(c => c.id !== courseId);
+        renderTable();
+        updateMetrics();
+        renderSearchResults(); // re-enable "Add" button
+    }
+
+    function updateMetrics() {
+        if (schedule.length === 0) {
+            totalCreditsEl.textContent = "0";
+            avgDifficultyEl.textContent = "0.0";
+            avgTimeEl.textContent = "0.0";
+            emptyState.classList.remove('d-none');
+            tableContainer.classList.add('d-none');
+            clearBtn.style.display = 'none';
+            if (saveBtn) saveBtn.disabled = true;
+            scheduleCount.textContent = "0 Courses";
+            return;
+        }
+
+        emptyState.classList.add('d-none');
+        tableContainer.classList.remove('d-none');
+        clearBtn.style.display = 'inline-block';
+        if (saveBtn) saveBtn.disabled = false;
+        scheduleCount.textContent = `${schedule.length} Course${schedule.length > 1 ? 's' : ''}`;
+
+        let totalCredits = 0;
+        let totalDifficulty = 0;
+        let totalTime = 0;
+        let ratedDiffCount = 0;
+        let ratedTimeCount = 0;
+
+        schedule.forEach(c => {
+            totalCredits += c.credits;
+            if (c.difficulty > 0) {
+                totalDifficulty += c.difficulty;
+                ratedDiffCount++;
+            }
+            if (c.time > 0) {
+                totalTime += c.time;
+                ratedTimeCount++;
+            }
+        });
+
+        totalCreditsEl.textContent = totalCredits;
+        avgDifficultyEl.textContent = ratedDiffCount > 0 ? (totalDifficulty / ratedDiffCount).toFixed(1) : "N/A";
+        avgTimeEl.textContent = ratedTimeCount > 0 ? (totalTime / ratedTimeCount).toFixed(1) : "N/A";
+
+        if (hiddenInputs) {
+            hiddenInputs.innerHTML = '';
+            schedule.forEach(c => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'selected_courses';
+                input.value = c.id;
+                hiddenInputs.appendChild(input);
+            });
+        }
+    }
+
+    function renderTable() {
+        tableBody.innerHTML = '';
+        schedule.forEach(c => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>
+                    <strong>${c.code}</strong><br>
+                    <small class="text-muted">${c.name}</small>
+                </td>
+                <td class="text-center">${c.credits}</td>
+                <td class="text-center">${c.difficulty > 0 ? c.difficulty.toFixed(1) + '/5' : '<span class="text-muted">N/A</span>'}</td>
+                <td class="text-center">${c.time > 0 ? c.time.toFixed(1) + '/5' : '<span class="text-muted">N/A</span>'}</td>
+                <td class="text-center">
+                    <button class="btn btn-sm btn-outline-danger" onclick="removeCourse(${c.id})">&times;</button>
+                </td>
+            `;
+            tableBody.appendChild(row);
+        });
+    }
+
+    searchInput.addEventListener('input', renderSearchResults);
+
+    // Clear All button
+    clearBtn.addEventListener('click', function() {
+        schedule = [];
+        renderTable();
+        updateMetrics();
+        renderSearchResults();
+    });
+
+    // Initial setup on load
+    window.addEventListener('DOMContentLoaded', () => {
+        // Load saved courses if user had any saved previously
+        if (savedCourseIds && savedCourseIds.length > 0) {
+            savedCourseIds.forEach(savedId => {
+                const course = allCourses.find(c => c.id === savedId);
+                if (course) schedule.push(course);
+            });
+            renderTable();
+            updateMetrics();
+        }
+        renderSearchResults();
+    });
+</script>
+{% endblock %}

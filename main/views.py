@@ -439,3 +439,32 @@ def my_profile(request):
         'reviews': reviews,
         'username_error': username_error
     })
+
+def calculator(request):
+    #Course take average difficulty, average time, and number of reviews
+    courses = Course.objects.annotate(
+        avg_difficulty=Avg('review__difficulty_score'),
+        avg_time=Avg('review__time_score'),
+        review_count=Count('review')
+    ).order_by('course_code')
+
+    # Handle saving schedule to a user who is logged in
+    if request.method == 'POST':
+        if not request.user.is_authenticated:
+            messages.error(request, "You must be logged in to save your schedule.")
+            return redirect('login')
+
+        selected_course_ids = request.POST.getlist('selected_courses')
+        request.user.saved_courses.set(selected_course_ids)
+        messages.success(request, "Your course schedule has been saved to your account!")
+        return redirect('calculator')
+
+    # If logged in, get their previously saved courses
+    saved_course_ids = []
+    if request.user.is_authenticated:
+        saved_course_ids = list(request.user.saved_courses.values_list('id', flat=True))
+
+    return render(request, 'calculator.html', {
+        'courses': courses,
+        'saved_course_ids': saved_course_ids,
+    })

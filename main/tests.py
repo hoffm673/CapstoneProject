@@ -196,3 +196,174 @@ class ReviewSubmissionTests(TestCase):
                 self.assertEqual(response.status_code, 200)
                 self.assertContains(response, "Select a valid course and professor")
                 self.assertEqual(Review.objects.count(), 0)
+class ReviewInteractionTestBase(TestCase):
+    """Shared setup: one review written by 'author', plus a second user 'reader'."""
+
+    def setUp(self):
+        self.author = User.objects.create_user(username='author', password='TestPass123!')
+        self.reader = User.objects.create_user(username='reader', password='TestPass123!')
+        professor = Professor.objects.create(professor_name='Dr. Test')
+        course = Course.objects.create(
+            course_code='COMP SCI 101', course_name='Intro', course_credits=3
+        )
+        course.course_professors.add(professor)
+        self.review = Review.objects.create(
+            review_user=self.author,
+            review_course=course,
+            review_professor=professor,
+            difficulty_score=2,
+            time_score=2,
+            review_text='Good class.'
+        )
+
+
+class UpvoteTests(ReviewInteractionTestBase):
+
+    def upvote(self):
+        return self.client.post(reverse('toggle_upvote', args=[self.review.id]))
+
+    def test_upvote_then_remove_upvote(self):
+        self.client.force_login(self.reader)
+
+        response = self.upvote()
+        self.assertEqual(response.json(), {'upvoted': True, 'upvote_count': 1})
+
+        response = self.upvote()
+        self.assertEqual(response.json(), {'upvoted': False, 'upvote_count': 0})
+
+    def test_each_user_counts_once(self):
+        for user in (self.reader, self.author):
+            self.client.force_login(user)
+            self.upvote()
+
+        self.assertEqual(self.review.review_upvotes.count(), 2)
+
+    def test_logged_out_user_cannot_upvote(self):
+        response = self.upvote()
+
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(self.review.review_upvotes.count(), 0)
+
+    def test_upvote_requires_post(self):
+        self.client.force_login(self.reader)
+        response = self.client.get(reverse('toggle_upvote', args=[self.review.id]))
+
+        self.assertEqual(response.status_code, 405)
+
+    def test_feed_shows_count_and_filled_heart(self):
+        self.review.review_upvotes.add(self.reader)
+        self.client.force_login(self.reader)
+
+        response = self.client.get(reverse('review_page'))
+
+        self.assertEqual(response.context['reviews'][0].upvote_count, 1)
+        self.assertTrue(response.context['reviews'][0].user_upvoted)
+        self.assertContains(response, 'bi-heart-fill')
+
+    def test_feed_sorts_by_most_upvoted(self):
+        other = Review.objects.create(
+            review_user=self.reader,
+            review_course=self.review.review_course,
+            review_professor=self.review.review_professor,
+            difficulty_score=3, time_score=3, review_text='Other review.'
+        )
+        other.review_upvotes.add(self.author, self.reader)
+
+        response = self.client.get(reverse('review_page'), {'sort': 'top'})
+
+        self.assertEqual(response.context['reviews'][0], other)
+
+
+class CommentTests(ReviewInteractionTestBase):
+
+    def add_comment(self, text):
+        return self.client.post(
+            reverse('add_comment', args=[self.review.id]),
+            {'comment_text': text}
+        )
+
+    def load(self, offset=0):
+        return self.client.get(
+            reverse('review_comments', args=[self.review.id]),
+            {'offset': offset}
+        ).json()
+
+    def test_add_comment(self):
+        self.client.force_login(self.reader)
+        response = self.add_comment('  Agreed, great class!  ')
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.json()['comment']['text'], 'Agreed, great class!')
+        self.assertEqual(response.json()['comment_count'], 1)
+        comment = Comment.objects.get()
+        self.assertEqual(comment.comment_user, self.reader)
+        self.assertEqual(comment.comment_review, self.review)
+
+    def test_rejects_blank_and_too_long_comments(self):
+        self.client.force_login(self.reader)
+
+        for text in ('   ', 'x' * 1001):
+            with self.subTest(length=len(text)):
+                response = self.add_comment(text)
+                self.assertEqual(response.status_code, 400)
+
+        self.assertEqual(Comment.objects.count(), 0)
+
+    def test_logged_out_user_cannot_comment(self):
+        response = self.add_comment('Hello')
+
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(Comment.objects.count(), 0)
+
+    def test_comments_load_three_at_a_time_oldest_first(self):
+        for i in range(7):
+            Comment.objects.create(
+                comment_review=self.review, comment_user=self.reader, comment_text=f'Comment {i}'
+            )
+
+        first = self.load(0)
+        second = self.load(3)
+        third = self.load(6)
+
+        self.assertEqual([c['text'] for c in first['comments']], ['Comment 0', 'Comment 1', 'Comment 2'])
+        self.assertTrue(first['has_more'])
+        self.assertEqual([c['text'] for c in second['comments']], ['Comment 3', 'Comment 4', 'Comment 5'])
+        self.assertTrue(second['has_more'])
+        self.assertEqual([c['text'] for c in third['comments']], ['Comment 6'])
+        self.assertFalse(third['has_more'])
+
+    def test_exactly_three_comments_has_no_show_more(self):
+        for i in range(3):
+            Comment.objects.create(
+                comment_review=self.review, comment_user=self.reader, comment_text=f'Comment {i}'
+            )
+
+        self.assertFalse(self.load(0)['has_more'])
+
+    def test_bad_offset_falls_back_to_start(self):
+        Comment.objects.create(
+            comment_review=self.review, comment_user=self.reader, comment_text='Only one'
+        )
+
+        self.assertEqual(self.load('abc')['comments'][0]['text'], 'Only one')
+
+    def test_deleting_review_deletes_comments(self):
+        Comment.objects.create(
+            comment_review=self.review, comment_user=self.reader, comment_text='Bye'
+        )
+        self.review.delete()
+
+        self.assertEqual(Comment.objects.count(), 0)
+
+    def test_feed_shows_comment_count(self):
+        Comment.objects.create(
+            comment_review=self.review, comment_user=self.reader, comment_text='Hi'
+        )
+        self.review.review_upvotes.add(self.reader, self.author)
+
+        response = self.client.get(reverse('review_page'))
+        review = response.context['reviews'][0]
+
+        # Both counts are correct together (guards against the join inflating either)
+        self.assertEqual(review.comment_count, 1)
+        self.assertEqual(review.upvote_count, 2)

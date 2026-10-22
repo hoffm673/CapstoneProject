@@ -19,6 +19,9 @@ from django.db.models import Q
 from django.http import JsonResponse
 from django.template.loader import render_to_string
 from django.db.models import Q, Case, When, Value, IntegerField
+from .models import Course, Professor, Comment
+from django.db.models import Exists, OuterRef
+from django.views.decorators.http import require_GET, require_POST
 
 
 
@@ -551,6 +554,105 @@ def review_page(request):
         'reviews': page_obj,
         'query': query,
         'sort_by': sort_by,
+    })
+
+# Comment and upvotes on reviews
+# How many comments to load each time "Show more" is clicked
+COMMENTS_PER_LOAD = 3
+COMMENT_MAX_LENGTH = 1000
+
+
+def _login_required_json():
+    return JsonResponse(
+        {'error': 'You must be logged in to do that.', 'login_url': reverse('login')},
+        status=401
+    )
+
+
+def _comment_to_dict(comment):
+    return {
+        'id': comment.id,
+        'user': comment.comment_user.username,
+        'text': comment.comment_text,
+        'date': comment.comment_date.strftime('%b %d, %Y'),
+    }
+
+
+@require_GET
+def review_comments(request, review_id):
+    """Return the next batch of comments for a review, oldest first.
+
+    Uses ?offset=N to say how many comments the page already has.
+    One extra comment is fetched to know whether a "Show more" button
+    is needed, without running a separate COUNT query.
+    """
+    review = get_object_or_404(Review, pk=review_id)
+
+    try:
+        offset = max(int(request.GET.get('offset', 0)), 0)
+    except ValueError:
+        offset = 0
+
+    batch = list(
+        review.comments.select_related('comment_user')
+        .order_by('comment_date', 'id')[offset:offset + COMMENTS_PER_LOAD + 1]
+    )
+
+    return JsonResponse({
+        'comments': [_comment_to_dict(c) for c in batch[:COMMENTS_PER_LOAD]],
+        'has_more': len(batch) > COMMENTS_PER_LOAD,
+    })
+
+
+@require_POST
+def add_comment(request, review_id):
+    """Post a new comment under a review."""
+    if not request.user.is_authenticated:
+        return _login_required_json()
+
+    review = get_object_or_404(Review, pk=review_id)
+    text = request.POST.get('comment_text', '').strip()
+
+    if not text:
+        return JsonResponse({'error': 'Comment cannot be blank.'}, status=400)
+    if len(text) > COMMENT_MAX_LENGTH:
+        return JsonResponse(
+            {'error': f'Comments can be at most {COMMENT_MAX_LENGTH} characters.'},
+            status=400
+        )
+
+    comment = Comment.objects.create(
+        comment_review=review,
+        comment_user=request.user,
+        comment_text=text
+    )
+
+    return JsonResponse({
+        'comment': _comment_to_dict(comment),
+        'comment_count': review.comments.count(),
+    }, status=201)
+
+
+@require_POST
+def toggle_upvote(request, review_id):
+    """Upvote a review, or remove the upvote if the user already upvoted it."""
+    if not request.user.is_authenticated:
+        return _login_required_json()
+
+    review = get_object_or_404(Review, pk=review_id)
+
+    if review.review_upvotes.filter(pk=request.user.pk).exists():
+        review.review_upvotes.remove(request.user)
+        upvoted = False
+    else:
+        review.review_upvotes.add(request.user)
+        upvoted = True
+
+    return JsonResponse({
+        'upvoted': upvoted,
+        'upvote_count': review.review_upvotes.count(),
+    })
+
 
 def calculator(request):
     #Course take average difficulty, average time, and number of reviews

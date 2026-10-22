@@ -4,8 +4,13 @@ from . import views
 urlpatterns = [
     path('', views.home, name='home'),
     path('calculator/', views.calculator, name='calculator'),
+#reviews and comments
     path('review/', views.review, name='review'),
     path('review-feed/', views.review_page, name='review_page'),
+    path('reviews/<int:review_id>/comments/', views.review_comments, name='review_comments'),
+    path('reviews/<int:review_id>/comments/add/', views.add_comment, name='add_comment'),
+    path('reviews/<int:review_id>/upvote/', views.toggle_upvote, name='toggle_upvote'),
+#Course and Search
     path('search/', views.search, name='search'),
     path('courses/<int:course_id>/', views.course_detail, name='course_detail'),
     path('courses/lookup/', views.course_lookup, name='course_lookup'),

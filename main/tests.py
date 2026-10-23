@@ -2,7 +2,7 @@ from django.core import mail
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
-from .models import Course, Professor, Review, User
+from .models import Course, Professor, Review, User, Comment
 
 
 class CourseDetailTests(TestCase):

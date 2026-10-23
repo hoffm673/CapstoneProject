@@ -196,3 +196,144 @@ class ReviewSubmissionTests(TestCase):
                 self.assertEqual(response.status_code, 200)
                 self.assertContains(response, "Select a valid course and professor")
                 self.assertEqual(Review.objects.count(), 0)
+
+
+class ProfileManagementTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='student',
+            password='OldSecurePass123!'
+        )
+        self.other_user = User.objects.create_user(
+            username='anotherstudent',
+            password='OtherSecurePass123!'
+        )
+        self.professor = Professor.objects.create(professor_name='Dr. Profile')
+        self.course = Course.objects.create(
+            course_code='COMP SCI 101',
+            course_name='Intro to Computer Science',
+            course_credits=3,
+        )
+        self.course.course_professors.add(self.professor)
+        self.review = Review.objects.create(
+            review_user=self.user,
+            review_course=self.course,
+            review_professor=self.professor,
+            difficulty_score=3,
+            time_score=4,
+            review_text='Original review text.',
+        )
+        self.client.force_login(self.user)
+
+    def test_profile_lists_reviews_with_edit_and_delete_actions(self):
+        response = self.client.get(reverse('my_profile'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Original review text.')
+        self.assertContains(response, reverse('edit_review', args=[self.review.pk]))
+        self.assertContains(response, reverse('delete_review', args=[self.review.pk]))
+
+    def test_user_can_edit_their_review(self):
+        edit_page = self.client.get(
+            reverse('edit_review', args=[self.review.pk])
+        )
+        self.assertEqual(edit_page.status_code, 200)
+        self.assertContains(edit_page, 'Original review text.')
+
+        response = self.client.post(
+            reverse('edit_review', args=[self.review.pk]),
+            {
+                'difficulty_score': '5',
+                'time_score': '2',
+                'review_text': 'Updated review text.',
+            }
+        )
+
+        self.assertRedirects(response, reverse('my_profile'))
+        self.review.refresh_from_db()
+        self.assertEqual(self.review.difficulty_score, 5)
+        self.assertEqual(self.review.time_score, 2)
+        self.assertEqual(self.review.review_text, 'Updated review text.')
+
+    def test_review_edit_rejects_invalid_data_without_saving(self):
+        response = self.client.post(
+            reverse('edit_review', args=[self.review.pk]),
+            {
+                'difficulty_score': '6',
+                'time_score': '2',
+                'review_text': 'Updated review text.',
+            }
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Both ratings must be whole numbers')
+        self.review.refresh_from_db()
+        self.assertEqual(self.review.difficulty_score, 3)
+
+    def test_user_cannot_edit_or_delete_another_users_review(self):
+        self.client.force_login(self.other_user)
+
+        edit_response = self.client.get(
+            reverse('edit_review', args=[self.review.pk])
+        )
+        edit_post_response = self.client.post(
+            reverse('edit_review', args=[self.review.pk]),
+            {
+                'difficulty_score': '1',
+                'time_score': '1',
+                'review_text': 'Unauthorized edit.',
+            }
+        )
+        delete_response = self.client.post(
+            reverse('delete_review', args=[self.review.pk])
+        )
+
+        self.assertEqual(edit_response.status_code, 404)
+        self.assertEqual(edit_post_response.status_code, 404)
+        self.assertEqual(delete_response.status_code, 404)
+        self.assertTrue(Review.objects.filter(pk=self.review.pk).exists())
+
+    def test_review_deletion_requires_post(self):
+        response = self.client.get(
+            reverse('delete_review', args=[self.review.pk])
+        )
+
+        self.assertEqual(response.status_code, 405)
+        self.assertTrue(Review.objects.filter(pk=self.review.pk).exists())
+
+    def test_user_can_delete_their_review(self):
+        response = self.client.post(
+            reverse('delete_review', args=[self.review.pk])
+        )
+
+        self.assertRedirects(response, reverse('my_profile'))
+        self.assertFalse(Review.objects.filter(pk=self.review.pk).exists())
+
+    def test_user_can_change_password_and_remains_logged_in(self):
+        response = self.client.post(reverse('my_profile'), {
+            'action': 'change_password',
+            'old_password': 'OldSecurePass123!',
+            'new_password1': 'NewSecurePass456!',
+            'new_password2': 'NewSecurePass456!',
+        })
+
+        self.assertRedirects(response, reverse('my_profile'))
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password('NewSecurePass456!'))
+        self.assertEqual(
+            self.client.get(reverse('my_profile')).status_code,
+            200
+        )
+
+    def test_password_change_rejects_an_incorrect_current_password(self):
+        response = self.client.post(reverse('my_profile'), {
+            'action': 'change_password',
+            'old_password': 'wrong password',
+            'new_password1': 'NewSecurePass456!',
+            'new_password2': 'NewSecurePass456!',
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Your old password was entered incorrectly')
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password('OldSecurePass123!'))

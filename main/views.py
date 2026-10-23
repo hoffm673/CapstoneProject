@@ -1,5 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.forms import PasswordChangeForm
+from django.contrib.auth import update_session_auth_hash
 from django.db.models import Avg, Count
 from .models import User
 from .models import Review
@@ -21,7 +23,7 @@ from django.template.loader import render_to_string
 from django.db.models import Q, Case, When, Value, IntegerField
 from .models import Course, Professor, Comment
 from django.db.models import Exists, OuterRef
-from django.views.decorators.http import require_GET, require_POST
+from django.views.decorators.http import require_GET, require_POST, require_http_methods
 from django.db.models import BooleanField
 
 
@@ -513,27 +515,111 @@ def course_lookup(request):
 
 @login_required
 def my_profile(request):
-
     username_error = None
+    password_form = PasswordChangeForm(user=request.user)
+    for field in password_form.fields.values():
+        field.widget.attrs['class'] = 'form-control'
 
-    # Method for changing username on the profile page
     if request.method == 'POST':
-        new_username = request.POST.get('username')
+        action = request.POST.get('action')
+        if action == 'change_username':
+            new_username = request.POST.get('username', '').strip()
+            if not new_username:
+                username_error = "Username cannot be blank."
+            elif User.objects.filter(username=new_username).exclude(
+                pk=request.user.pk
+            ).exists():
+                username_error = "That username is already taken."
+            else:
+                request.user.username = new_username
+                request.user.save(update_fields=['username'])
+                messages.success(request, "Your username has been updated.")
+                return redirect('my_profile')
+        elif action == 'change_password':
+            password_form = PasswordChangeForm(
+                user=request.user,
+                data=request.POST
+            )
+            for field in password_form.fields.values():
+                field.widget.attrs['class'] = 'form-control'
+            if password_form.is_valid():
+                user = password_form.save()
+                update_session_auth_hash(request, user)
+                messages.success(request, "Your password has been changed.")
+                return redirect('my_profile')
 
-        # Check if the username already exists
-        if User.objects.filter(username=new_username).exclude(id=request.user.id).exists():
-            username_error = "That username is already taken."
-        else:
-            request.user.username = new_username
-            request.user.save()
-
-    # grabs all the reviews for the logged in user
-    reviews = Review.objects.filter(review_user=request.user)
+    reviews = Review.objects.filter(
+        review_user=request.user
+    ).select_related('review_course', 'review_professor').order_by('-review_date', '-id')
 
     return render(request, 'my_profile.html', {
         'reviews': reviews,
-        'username_error': username_error
+        'username_error': username_error,
+        'password_form': password_form,
     })
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def edit_review(request, review_id):
+    review = get_object_or_404(Review, pk=review_id, review_user=request.user)
+    error = None
+    difficulty_value = review.difficulty_score
+    time_value = review.time_score
+    review_text_value = review.review_text
+
+    if request.method == 'POST':
+        difficulty_value = request.POST.get('difficulty_score', '')
+        time_value = request.POST.get('time_score', '')
+        review_text_value = request.POST.get('review_text', '')
+        try:
+            difficulty_score = int(difficulty_value)
+            time_score = int(time_value)
+        except (TypeError, ValueError):
+            difficulty_score = time_score = None
+
+        review_text = review_text_value.strip()
+        if (
+            difficulty_score not in range(1, 6)
+            or time_score not in range(1, 6)
+        ):
+            error = 'Both ratings must be whole numbers from 1 to 5.'
+        elif not review_text:
+            error = 'Review text cannot be blank.'
+        else:
+            review.difficulty_score = difficulty_score
+            review.time_score = time_score
+            review.review_text = review_text
+            review.save(update_fields=[
+                'difficulty_score',
+                'time_score',
+                'review_text',
+            ])
+            messages.success(request, "Your review has been updated.")
+            return redirect('my_profile')
+
+    return render(request, 'edit_review.html', {
+        'review': review,
+        'error': error,
+        'difficulty_options': [
+            (score, str(score) == str(difficulty_value))
+            for score in range(1, 6)
+        ],
+        'time_options': [
+            (score, str(score) == str(time_value))
+            for score in range(1, 6)
+        ],
+        'review_text_value': review_text_value,
+    })
+
+
+@login_required
+@require_POST
+def delete_review(request, review_id):
+    review = get_object_or_404(Review, pk=review_id, review_user=request.user)
+    review.delete()
+    messages.success(request, "Your review has been deleted.")
+    return redirect('my_profile')
 """review page showing all reviews"""
 def review_page(request):
     query = request.GET.get('q', '').strip()

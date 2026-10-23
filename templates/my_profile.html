@@ -9,6 +9,12 @@
 
         <h1>My Profile</h1>
 
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags|default:'info' }}" role="alert">
+                {{ message }}
+            </div>
+        {% endfor %}
+
         <!-- Profile card that shows the user's name, email, and major-->
         <div class="card mt-4">
             <div class="card-body">
@@ -43,6 +49,7 @@
 
                 <form method="POST">
                     {% csrf_token %}
+                    <input type="hidden" name="action" value="change_username">
 
                     <div class="mb-3">
                         <label for="username" class="form-label">
@@ -71,6 +78,42 @@
 
                 </form>
 
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-body">
+                <h5 class="card-title">Change Password</h5>
+
+                <form method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="change_password">
+
+                    {% if password_form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {{ password_form.non_field_errors }}
+                        </div>
+                    {% endif %}
+
+                    {% for field in password_form %}
+                        <div class="mb-3">
+                            <label for="{{ field.id_for_label }}" class="form-label">
+                                {{ field.label }}
+                            </label>
+                            {{ field }}
+                            {% for error in field.errors %}
+                                <div class="text-danger mt-1">{{ error }}</div>
+                            {% endfor %}
+                            {% if field.help_text %}
+                                <div class="form-text">{{ field.help_text }}</div>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+
+                    <button type="submit" class="btn btn-primary">
+                        Update Password
+                    </button>
+                </form>
             </div>
         </div>
 
@@ -111,6 +154,22 @@
                                 Posted {{ review.review_date }}
                             </small>
 
+                            <div class="mt-3 d-flex gap-2">
+                                <a href="{% url 'edit_review' review.id %}" class="btn btn-outline-primary btn-sm">
+                                    Edit Review
+                                </a>
+                                <form method="POST" action="{% url 'delete_review' review.id %}">
+                                    {% csrf_token %}
+                                    <button
+                                        type="submit"
+                                        class="btn btn-outline-danger btn-sm"
+                                        onclick="return confirm('Delete this review? This cannot be undone.');"
+                                    >
+                                        Delete Review
+                                    </button>
+                                </form>
+                            </div>
+
                         </div>
                     </div>
 
@@ -127,4 +186,3 @@
     </div>
 
     {% endblock %}
-

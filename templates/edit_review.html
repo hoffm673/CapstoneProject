@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Review{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="card shadow p-4 mx-auto" style="max-width: 700px;">
+        <h1 class="h2 mb-3">Edit Review</h1>
+        <p class="text-muted">
+            {{ review.review_course }}{% if review.review_professor %} with {{ review.review_professor }}{% endif %}
+        </p>
+
+        {% if error %}
+            <div class="alert alert-danger">{{ error }}</div>
+        {% endif %}
+
+        <form method="POST">
+            {% csrf_token %}
+
+            <div class="row mb-3">
+                <div class="col">
+                    <label for="difficulty_score" class="form-label">Difficulty (1-5)</label>
+                    <select class="form-select" id="difficulty_score" name="difficulty_score" required>
+                        {% for score, selected in difficulty_options %}
+                            <option value="{{ score }}"{% if selected %} selected{% endif %}>{{ score }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col">
+                    <label for="time_score" class="form-label">Time Commitment (1-5)</label>
+                    <select class="form-select" id="time_score" name="time_score" required>
+                        {% for score, selected in time_options %}
+                            <option value="{{ score }}"{% if selected %} selected{% endif %}>{{ score }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label for="review_text" class="form-label">Your Review</label>
+                <textarea
+                    class="form-control"
+                    id="review_text"
+                    name="review_text"
+                    rows="5"
+                    required
+                >{{ review_text_value }}</textarea>
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+                <a href="{% url 'my_profile' %}" class="btn btn-outline-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

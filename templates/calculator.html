@@ -6,43 +6,83 @@
 {% block content %}
 <div class="container py-3">
 
-    <div class="row mb-4">
+    <div class="row mb-3">
         <div class="col-12 text-center">
             <h1 class="display-5 fw-bold">Course Load Calculator</h1>
             <p class="lead text-muted">Add your semester courses below to calculate overall difficulty and time commitment.</p>
         </div>
     </div>
 
-    <!--Metrics, averages of credits, time, difficulty -->
-    <div class="row g-3 mb-4 text-center">
-        <div class="col-md-4">
-            <div class="card shadow-sm border-0 bg-light">
-                <div class="card-body">
-                    <h6 class="text-muted text-uppercase fw-bold">Total Credits</h6>
-                    <h2 class="display-6 fw-bold text-primary mb-0" id="total-credits">0</h2>
+    <!-- user set bounds -->
+    <div class="row justify-content-center mb-4">
+        <div class="col-md-8">
+            <div class="card shadow-sm border-dark">
+                <div class="card-header bg-dark text-white text-center fw-bold">
+                    <i class="bi bi-sliders"></i> Set Your Limits
+                </div>
+                <div class="card-body row text-center">
+                    <div class="col-md-6 border-end">
+                        <label class="form-label fw-bold mb-0">Max Avg Difficulty: <span id="diff-target-val" class="text-primary">3.0</span> / 5</label>
+                        <input type="range" class="form-range" id="diff-target" min="1" max="5" step="0.1" value="3.0">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold mb-0">Max Avg Time: <span id="time-target-val" class="text-primary">3.0</span> / 5</label>
+                        <input type="range" class="form-range" id="time-target" min="1" max="5" step="0.1" value="3.0">
+                    </div>
                 </div>
             </div>
         </div>
+    </div>
+
+    <!-- Graphs -->
+    <div class="row g-3 mb-4 text-center">
+        <!-- Total Credits -->
         <div class="col-md-4">
-            <div class="card shadow-sm border-0 bg-light">
+            <div class="card shadow-sm border-0 bg-light h-100">
+                <div class="card-body d-flex flex-column justify-content-center">
+                    <h6 class="text-muted text-uppercase fw-bold">Total Credits</h6>
+                    <h2 class="display-6 fw-bold text-dark mb-0" id="total-credits">0</h2>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Avg Difficulty -->
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0 bg-light h-100">
                 <div class="card-body">
                     <h6 class="text-muted text-uppercase fw-bold">Avg Difficulty</h6>
-                    <h2 class="display-6 fw-bold text-warning mb-0"><span id="avg-difficulty">0.0</span> <small class="fs-6 text-muted">/ 5</small></h2>
+                    <h2 class="display-6 fw-bold mb-2" id="avg-difficulty-text">
+                        <span id="avg-difficulty">0.0</span> <small class="fs-6 text-muted">/ 5</small>
+                    </h2>
+                    <!-- Difficulty Graph -->
+                    <div class="progress" style="height: 12px;">
+                        <div id="diff-bar" class="progress-bar bg-success" role="progressbar" style="width: 0%;"></div>
+                    </div>
+                    <small class="text-muted" id="diff-status">0% of your limit</small>
                 </div>
             </div>
         </div>
+        
+        <!-- Avg Time -->
         <div class="col-md-4">
-            <div class="card shadow-sm border-0 bg-light">
+            <div class="card shadow-sm border-0 bg-light h-100">
                 <div class="card-body">
                     <h6 class="text-muted text-uppercase fw-bold">Avg Time Commitment</h6>
-                    <h2 class="display-6 fw-bold text-info mb-0"><span id="avg-time">0.0</span> <small class="fs-6 text-muted">/ 5</small></h2>
+                    <h2 class="display-6 fw-bold mb-2" id="avg-time-text">
+                        <span id="avg-time">0.0</span> <small class="fs-6 text-muted">/ 5</small>
+                    </h2>
+                    <!-- Time Graph -->
+                    <div class="progress" style="height: 12px;">
+                        <div id="time-bar" class="progress-bar bg-success" role="progressbar" style="width: 0%;"></div>
+                    </div>
+                    <small class="text-muted" id="time-status">0% of your limit</small>
                 </div>
             </div>
         </div>
     </div>
 
     <div class="row g-4">
-        <!-- Course Selector -->
+        <!-- Left: Searchable Course Selector (PAGINATED) -->
         <div class="col-lg-5">
             <div class="card shadow-sm">
                 <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
@@ -56,18 +96,32 @@
                         <input type="text"
                                id="course-search-input"
                                class="form-control"
-                               placeholder="Search number, code, or name (e.g. 351, CS, Algorithm)..."
+                               placeholder="Search (e.g. 351, CS)..."
                                autocomplete="off">
                     </div>
 
                     <!-- Course Results List -->
-                    <div id="course-results-list" class="list-group" style="max-height: 380px; overflow-y: auto;">
+                    <div id="course-results-list" class="list-group mb-3" style="min-height: 400px;">
+                        <!-- Filtered dynamically by JavaScript -->
+                    </div>
+
+                    <!-- Pagination Controls -->
+                    <div class="d-flex justify-content-between align-items-center">
+                        <button class="btn btn-sm btn-outline-secondary" id="prev-page-btn" disabled>
+                            <i class="bi bi-chevron-left"></i> Prev
+                        </button>
+                        <span class="small fw-bold text-muted">
+                            Page <span id="current-page-display">1</span> of <span id="total-pages-display">1</span>
+                        </span>
+                        <button class="btn btn-sm btn-outline-secondary" id="next-page-btn" disabled>
+                            Next <i class="bi bi-chevron-right"></i>
+                        </button>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Current Schedule -->
+        <!-- Right: Current Schedule -->
         <div class="col-lg-7">
             <div class="card shadow-sm">
                 <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
@@ -79,14 +133,13 @@
                         <p class="mb-0">No courses added yet. Search and add a course on the left to begin.</p>
                     </div>
 
-                    <!-- Courses List Table -->
                     <div class="table-responsive d-none" id="schedule-table-container">
                         <table class="table table-hover align-middle mb-0">
                             <thead class="table-light">
                                 <tr>
                                     <th>Course</th>
                                     <th class="text-center">Credits</th>
-                                    <th class="text-center">Difficulty</th>
+                                    <th class="text-center">Diff</th>
                                     <th class="text-center">Time</th>
                                     <th class="text-center">Action</th>
                                 </tr>
@@ -104,12 +157,12 @@
                             {% csrf_token %}
                             <div id="hidden-inputs-container"></div>
                             <button type="submit" class="btn btn-success" id="save-btn" disabled>
-                                <i class="bi bi-bookmark-check me-1"></i> Save Schedule to Account
+                                <i class="bi bi-bookmark-check me-1"></i> Save to Account
                             </button>
                         </form>
                     {% else %}
                         <span class="text-muted small">
-                            <a href="{% url 'login' %}">Log in</a> to save this schedule to your account.
+                            <a href="{% url 'login' %}">Log in</a> to save.
                         </span>
                     {% endif %}
                     <button type="button" class="btn btn-outline-danger btn-sm" id="clear-all-btn" style="display: none;">
@@ -121,8 +174,8 @@
     </div>
 </div>
 
+<!-- Calculator Client-Side JavaScript -->
 <script>
-    // load course data into JavaScript
     const allCourses = [
         {% for c in courses %}
         {
@@ -139,44 +192,112 @@
 
     const savedCourseIds = {{ saved_course_ids|safe }};
     let schedule = [];
+    let filteredCourses = [];
+    
+    // Pagination Variables
+    let currentPage = 1;
+    const coursesPerPage = 20;
 
     // DOM Elements
     const searchInput = document.getElementById('course-search-input');
     const resultsList = document.getElementById('course-results-list');
     const resultsCount = document.getElementById('results-count');
-    const tableBody = document.getElementById('schedule-table-body');
-    const tableContainer = document.getElementById('schedule-table-container');
-    const emptyState = document.getElementById('empty-state');
-    const scheduleCount = document.getElementById('schedule-count');
-    const clearBtn = document.getElementById('clear-all-btn');
-    const saveBtn = document.getElementById('save-btn');
-    const hiddenInputs = document.getElementById('hidden-inputs-container');
+    
+    // Pagination Elements
+    const prevBtn = document.getElementById('prev-page-btn');
+    const nextBtn = document.getElementById('next-page-btn');
+    const pageDisplay = document.getElementById('current-page-display');
+    const totalPagesDisplay = document.getElementById('total-pages-display');
 
-    const totalCreditsEl = document.getElementById('total-credits');
-    const avgDifficultyEl = document.getElementById('avg-difficulty');
-    const avgTimeEl = document.getElementById('avg-time');
+    // Bounds / Graph Elements
+    const diffTargetInput = document.getElementById('diff-target');
+    const timeTargetInput = document.getElementById('time-target');
+    const diffTargetVal = document.getElementById('diff-target-val');
+    const timeTargetVal = document.getElementById('time-target-val');
+    const diffBar = document.getElementById('diff-bar');
+    const timeBar = document.getElementById('time-bar');
+    const diffStatus = document.getElementById('diff-status');
+    const timeStatus = document.getElementById('time-status');
 
-    // Render search results based input (currently very slow/awkward, will be worked on)
-    function renderSearchResults() {
+    // Update Bound Labels
+    diffTargetInput.addEventListener('input', (e) => {
+        diffTargetVal.textContent = parseFloat(e.target.value).toFixed(1);
+        updateMetrics();
+    });
+    timeTargetInput.addEventListener('input', (e) => {
+        timeTargetVal.textContent = parseFloat(e.target.value).toFixed(1);
+        updateMetrics();
+    });
+
+    function getBarColorClass(percentage) {
+        if (percentage >= 100) return 'bg-danger';
+        if (percentage >= 80) return 'bg-warning';
+        return 'bg-success';
+    }
+    function getTextColorClass(percentage) {
+        if (percentage >= 100) return 'text-danger';
+        if (percentage >= 80) return 'text-warning';
+        return 'text-success';
+    }
+
+    // Paginator Logic
+    function applyPagination() {
+        const totalPages = Math.ceil(filteredCourses.length / coursesPerPage) || 1;
+        
+        if (currentPage > totalPages) currentPage = 1;
+
+        pageDisplay.textContent = currentPage;
+        totalPagesDisplay.textContent = totalPages;
+        
+        prevBtn.disabled = currentPage === 1;
+        nextBtn.disabled = currentPage === totalPages;
+
+        const startIndex = (currentPage - 1) * coursesPerPage;
+        const paginatedCourses = filteredCourses.slice(startIndex, startIndex + coursesPerPage);
+        
+        renderResultsList(paginatedCourses);
+    }
+
+    // Our Next / Prev Button Events
+    prevBtn.addEventListener('click', () => {
+        if (currentPage > 1) {
+            currentPage--;
+            applyPagination();
+        }
+    });
+    nextBtn.addEventListener('click', () => {
+        const totalPages = Math.ceil(filteredCourses.length / coursesPerPage);
+        if (currentPage < totalPages) {
+            currentPage++;
+            applyPagination();
+        }
+    });
+
+    // Main Search Logic
+    function handleSearch() {
         const query = searchInput.value.trim().toLowerCase();
-        resultsList.innerHTML = '';
-
-        const filtered = allCourses.filter(c => {
+        
+        // Filter array
+        filteredCourses = allCourses.filter(c => {
             return c.code.toLowerCase().includes(query) || c.name.toLowerCase().includes(query);
         });
 
-        resultsCount.textContent = `${filtered.length} found`;
+        resultsCount.textContent = `${filteredCourses.length} total`;
+        
+        // Reset to page 1 if user starts typing a new search
+        currentPage = 1;
+        applyPagination();
+    }
 
-        if (filtered.length === 0) {
-            resultsList.innerHTML = `
-                <div class="text-center text-muted py-4">
-                    <small>No courses found matching "${query}"</small>
-                </div>
-            `;
+    function renderResultsList(coursesToRender) {
+        resultsList.innerHTML = '';
+
+        if (coursesToRender.length === 0) {
+            resultsList.innerHTML = `<div class="text-center text-muted py-4"><small>No courses found.</small></div>`;
             return;
         }
 
-        filtered.forEach(c => {
+        coursesToRender.forEach(c => {
             const isAdded = schedule.some(item => item.id === c.id);
             const item = document.createElement('div');
             item.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center py-2 px-3';
@@ -184,7 +305,7 @@
                 <div class="me-2" style="overflow: hidden;">
                     <div class="fw-bold text-truncate">${c.code}</div>
                     <small class="text-muted text-truncate d-block">${c.name}</small>
-                    <small class="text-secondary">${c.credits} cr &bull; Diff: ${c.difficulty > 0 ? c.difficulty + '/5' : 'No ratings'}</small>
+                    <small class="text-secondary">${c.credits} cr &bull; Diff: ${c.difficulty > 0 ? c.difficulty : '?'}/5 &bull; Time: ${c.time > 0 ? c.time : '?'}/5</small>
                 </div>
                 <button type="button" class="btn btn-sm ${isAdded ? 'btn-secondary' : 'btn-outline-primary'} flex-shrink-0"
                         onclick="toggleCourse(${c.id})" ${isAdded ? 'disabled' : ''}>
@@ -203,58 +324,85 @@
             schedule.push(course);
             renderTable();
             updateMetrics();
-            renderSearchResults();
+            applyPagination(); 
         }
     }
-    //Functionality for removing course that user added
+
     function removeCourse(courseId) {
         schedule = schedule.filter(c => c.id !== courseId);
         renderTable();
         updateMetrics();
-        renderSearchResults(); // re-enable "Add" button
+        applyPagination(); 
     }
 
     function updateMetrics() {
+        const totalCreditsEl = document.getElementById('total-credits');
+        const avgDifficultyEl = document.getElementById('avg-difficulty');
+        const avgTimeEl = document.getElementById('avg-time');
+        const diffText = document.getElementById('avg-difficulty-text');
+        const timeText = document.getElementById('avg-time-text');
+
         if (schedule.length === 0) {
             totalCreditsEl.textContent = "0";
             avgDifficultyEl.textContent = "0.0";
             avgTimeEl.textContent = "0.0";
-            emptyState.classList.remove('d-none');
-            tableContainer.classList.add('d-none');
-            clearBtn.style.display = 'none';
-            if (saveBtn) saveBtn.disabled = true;
-            scheduleCount.textContent = "0 Courses";
+            
+            diffBar.style.width = '0%';
+            timeBar.style.width = '0%';
+            diffStatus.textContent = "0% of limit";
+            timeStatus.textContent = "0% of limit";
+            diffText.className = "display-6 fw-bold mb-2";
+            timeText.className = "display-6 fw-bold mb-2";
+
+            document.getElementById('empty-state').classList.remove('d-none');
+            document.getElementById('schedule-table-container').classList.add('d-none');
+            document.getElementById('clear-all-btn').style.display = 'none';
+            if (document.getElementById('save-btn')) document.getElementById('save-btn').disabled = true;
+            document.getElementById('schedule-count').textContent = "0 Courses";
             return;
         }
 
-        emptyState.classList.add('d-none');
-        tableContainer.classList.remove('d-none');
-        clearBtn.style.display = 'inline-block';
-        if (saveBtn) saveBtn.disabled = false;
-        scheduleCount.textContent = `${schedule.length} Course${schedule.length > 1 ? 's' : ''}`;
+        document.getElementById('empty-state').classList.add('d-none');
+        document.getElementById('schedule-table-container').classList.remove('d-none');
+        document.getElementById('clear-all-btn').style.display = 'inline-block';
+        if (document.getElementById('save-btn')) document.getElementById('save-btn').disabled = false;
+        document.getElementById('schedule-count').textContent = `${schedule.length} Course${schedule.length > 1 ? 's' : ''}`;
 
-        let totalCredits = 0;
-        let totalDifficulty = 0;
-        let totalTime = 0;
-        let ratedDiffCount = 0;
-        let ratedTimeCount = 0;
+        let totalCredits = 0, totalDifficulty = 0, totalTime = 0;
+        let ratedDiffCount = 0, ratedTimeCount = 0;
 
         schedule.forEach(c => {
             totalCredits += c.credits;
-            if (c.difficulty > 0) {
-                totalDifficulty += c.difficulty;
-                ratedDiffCount++;
-            }
-            if (c.time > 0) {
-                totalTime += c.time;
-                ratedTimeCount++;
-            }
+            if (c.difficulty > 0) { totalDifficulty += c.difficulty; ratedDiffCount++; }
+            if (c.time > 0) { totalTime += c.time; ratedTimeCount++; }
         });
 
+        const currentAvgDiff = ratedDiffCount > 0 ? (totalDifficulty / ratedDiffCount) : 0;
+        const currentAvgTime = ratedTimeCount > 0 ? (totalTime / ratedTimeCount) : 0;
+        
         totalCreditsEl.textContent = totalCredits;
-        avgDifficultyEl.textContent = ratedDiffCount > 0 ? (totalDifficulty / ratedDiffCount).toFixed(1) : "N/A";
-        avgTimeEl.textContent = ratedTimeCount > 0 ? (totalTime / ratedTimeCount).toFixed(1) : "N/A";
+        avgDifficultyEl.textContent = ratedDiffCount > 0 ? currentAvgDiff.toFixed(1) : "N/A";
+        avgTimeEl.textContent = ratedTimeCount > 0 ? currentAvgTime.toFixed(1) : "N/A";
 
+        //Calculations for graphs
+        const maxDiff = parseFloat(diffTargetInput.value);
+        const maxTime = parseFloat(timeTargetInput.value);
+        
+        const diffPercent = currentAvgDiff > 0 ? (currentAvgDiff / maxDiff) * 100 : 0;
+        const timePercent = currentAvgTime > 0 ? (currentAvgTime / maxTime) * 100 : 0;
+
+        // Update bars
+        diffBar.style.width = `${Math.min(diffPercent, 100)}%`;
+        diffBar.className = `progress-bar ${getBarColorClass(diffPercent)}`;
+        diffStatus.textContent = ratedDiffCount > 0 ? `${Math.round(diffPercent)}% of limit` : "No data";
+        diffText.className = `display-6 fw-bold mb-2 ${getTextColorClass(diffPercent)}`;
+
+        timeBar.style.width = `${Math.min(timePercent, 100)}%`;
+        timeBar.className = `progress-bar ${getBarColorClass(timePercent)}`;
+        timeStatus.textContent = ratedTimeCount > 0 ? `${Math.round(timePercent)}% of limit` : "No data";
+        timeText.className = `display-6 fw-bold mb-2 ${getTextColorClass(timePercent)}`;
+
+        const hiddenInputs = document.getElementById('hidden-inputs-container');
         if (hiddenInputs) {
             hiddenInputs.innerHTML = '';
             schedule.forEach(c => {
@@ -268,6 +416,7 @@
     }
 
     function renderTable() {
+        const tableBody = document.getElementById('schedule-table-body');
         tableBody.innerHTML = '';
         schedule.forEach(c => {
             const row = document.createElement('tr');
@@ -277,8 +426,8 @@
                     <small class="text-muted">${c.name}</small>
                 </td>
                 <td class="text-center">${c.credits}</td>
-                <td class="text-center">${c.difficulty > 0 ? c.difficulty.toFixed(1) + '/5' : '<span class="text-muted">N/A</span>'}</td>
-                <td class="text-center">${c.time > 0 ? c.time.toFixed(1) + '/5' : '<span class="text-muted">N/A</span>'}</td>
+                <td class="text-center">${c.difficulty > 0 ? c.difficulty.toFixed(1) : '<span class="text-muted">-</span>'}</td>
+                <td class="text-center">${c.time > 0 ? c.time.toFixed(1) : '<span class="text-muted">-</span>'}</td>
                 <td class="text-center">
                     <button class="btn btn-sm btn-outline-danger" onclick="removeCourse(${c.id})">&times;</button>
                 </td>
@@ -287,19 +436,16 @@
         });
     }
 
-    searchInput.addEventListener('input', renderSearchResults);
+    searchInput.addEventListener('input', handleSearch);
 
-    // Clear All button
-    clearBtn.addEventListener('click', function() {
+    document.getElementById('clear-all-btn').addEventListener('click', function() {
         schedule = [];
         renderTable();
         updateMetrics();
-        renderSearchResults();
+        applyPagination();
     });
 
-    // Initial setup on load
     window.addEventListener('DOMContentLoaded', () => {
-        // Load saved courses if user had any saved previously
         if (savedCourseIds && savedCourseIds.length > 0) {
             savedCourseIds.forEach(savedId => {
                 const course = allCourses.find(c => c.id === savedId);
@@ -308,7 +454,8 @@
             renderTable();
             updateMetrics();
         }
-        renderSearchResults();
+        // Initialize full list pagination
+        handleSearch();
     });
 </script>
 {% endblock %}

@@ -22,6 +22,7 @@ from django.db.models import Q, Case, When, Value, IntegerField
 from .models import Course, Professor, Comment
 from django.db.models import Exists, OuterRef
 from django.views.decorators.http import require_GET, require_POST
+from django.db.models import BooleanField
 
 
 
@@ -524,7 +525,26 @@ def review_page(request):
         'review_course',
         'review_professor',
         'review_user__user_major'
+    ).annotate(
+        # distinct=True stops the two joins from multiplying each other's counts
+        upvote_count=Count('review_upvotes', distinct=True),
+        comment_count=Count('comments', distinct=True),
     )
+
+    # Whether the current user has upvoted each review (drives the filled heart)
+    if request.user.is_authenticated:
+        reviews = reviews.annotate(
+            user_upvoted=Exists(
+                Review.review_upvotes.through.objects.filter(
+                    review_id=OuterRef('pk'),
+                    user_id=request.user.pk,
+                )
+            )
+        )
+    else:
+        reviews = reviews.annotate(
+            user_upvoted=Value(False, output_field=BooleanField())
+        )
 
     # 1. Search across review text, course code/name, professor name, and author username
     if query:

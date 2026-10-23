@@ -19,7 +19,7 @@ class CourseAdmin(admin.ModelAdmin):
 
     def display_professors(self, obj):
         return ", ".join(
-            professor.professor_name for professor in obj.course_professors.all()
+            professor.name for professor in obj.course_professors.all()
         )
 
     display_professors.short_description = 'Professors'

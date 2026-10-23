@@ -1,7 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
 from django.db.models import Avg, Count
-from django.db import transaction
 from .models import User
 from .models import Review
 from .models import Course, Professor
@@ -20,10 +19,6 @@ from django.db.models import Q
 from django.http import JsonResponse
 from django.template.loader import render_to_string
 from django.db.models import Q, Case, When, Value, IntegerField
-from .models import Course, Professor, Comment
-from django.db.models import Exists, OuterRef
-from django.views.decorators.http import require_GET, require_POST
-from django.db.models import BooleanField
 
 
 
@@ -31,87 +26,100 @@ def home(request):
     """Render the home page with the two most recent course reviews."""
     # Pull related records in the same query so the template does not issue
     # extra database queries for each review card.
-    recent_reviews = Review.objects.select_related(
+    reviews = Review.objects.select_related(
         'review_course',
         'review_professor',
         'review_user__user_major'
-    ).order_by('-review_date', '-id')[:2]
+    ).annotate(
+        course_review_count=Count('review_course__review')
+    )
+
+    sort_by = request.GET.get('sort', 'recent')
+
+    if sort_by == 'popular':
+        reviews = reviews.order_by('-course_review_count', '-review_date', '-id')
+    else:
+        reviews = reviews.order_by('-review_date', '-id')
+
+    recent_reviews = reviews[:2]
+
+    popular = Course.objects.annotate(
+        review_count=Count('review')
+    ).filter(
+        review_count__gt=0
+    ).order_by('-review_count')[:4]
 
     return render(request, 'home.html', {
-        'recent_reviews': recent_reviews
+        'recent_reviews': recent_reviews,
+        'sort_by': sort_by,
+        'popular': popular,
     })
 
 @login_required
 def review(request):
-    """Submit a review, optionally adding a professor missing from the list."""
+    """Render the review submission form with selectable courses and professors."""
     courses = Course.objects.all().order_by('course_code')
     professors = Professor.objects.all().order_by('professor_name')
 
+    # Takes the inputs from the review form (POST) and adds them in the database
     if request.method == 'POST':
         course_id = request.POST.get('course')
-        professor_id = request.POST.get('professor', '')
-        new_professor_name = ' '.join(request.POST.get('new_professor_name', '').split())
+        professor_id = request.POST.get('professor')
+        difficulty_score = request.POST.get('difficulty_score')
+        time_score = request.POST.get('time_score')
         review_text = request.POST.get('review_text', '').strip()
-
-        context = {'courses': courses, 'professors': professors}
 
         try:
             course = Course.objects.get(pk=course_id)
-        except (Course.DoesNotExist, TypeError, ValueError):
-            context['error'] = 'Select a valid course.'
-            return render(request, 'review.html', context)
+            professor = Professor.objects.get(pk=professor_id)
+        except (Course.DoesNotExist, Professor.DoesNotExist, TypeError, ValueError):
+            return render(request, 'review.html', {
+                'courses': courses,
+                'professors': professors,
+                'error': 'Select a valid course and professor.',
+            })
+
+        if not course.course_professors.filter(pk=professor.pk).exists():
+            return render(request, 'review.html', {
+                'courses': courses,
+                'professors': professors,
+                'error': 'Select a professor who teaches the selected course.',
+            })
 
         try:
-            difficulty_score = int(request.POST.get('difficulty_score'))
-            time_score = int(request.POST.get('time_score'))
+            difficulty_score = int(difficulty_score)
+            time_score = int(time_score)
         except (TypeError, ValueError):
             difficulty_score = time_score = None
 
-        if difficulty_score not in range(1, 6) or time_score not in range(1, 6):
-            context['error'] = 'Both ratings must be whole numbers from 1 to 5.'
-            return render(request, 'review.html', context)
+        if (
+            difficulty_score not in range(1, 6)
+            or time_score not in range(1, 6)
+        ):
+            return render(request, 'review.html', {
+                'courses': courses,
+                'professors': professors,
+                'error': 'Both ratings must be whole numbers from 1 to 5.',
+            })
 
         if not review_text:
-            context['error'] = 'Review text cannot be blank.'
-            return render(request, 'review.html', context)
+            return render(request, 'review.html', {
+                'courses': courses,
+                'professors': professors,
+                'error': 'Review text cannot be blank.',
+            })
 
-        if professor_id == '__new__':
-            if not new_professor_name:
-                context['error'] = 'Enter the professor’s name.'
-                return render(request, 'review.html', context)
-            if len(new_professor_name) > 100:
-                context['error'] = 'Professor names must be 100 characters or fewer.'
-                return render(request, 'review.html', context)
-        else:
-            try:
-                professor = Professor.objects.get(pk=professor_id)
-            except (Professor.DoesNotExist, TypeError, ValueError):
-                context['error'] = 'Select a valid professor or choose the add-new option.'
-                return render(request, 'review.html', context)
+        # Creates a new Review object using the data collected from the form (POST)
+        Review.objects.create(
+            review_user=request.user,
+            review_course=course,
+            review_professor=professor,
+            difficulty_score=difficulty_score,
+            time_score=time_score,
+            review_text=review_text
+        )
 
-            if not course.course_professors.filter(pk=professor.pk).exists():
-                context['error'] = 'Select a professor who teaches the selected course.'
-                return render(request, 'review.html', context)
-
-        # Save the professor/course relationship and the review together.
-        with transaction.atomic():
-            if professor_id == '__new__':
-                professor = Professor.objects.filter(
-                    professor_name__iexact=new_professor_name
-                ).first()
-                if professor is None:
-                    professor = Professor.objects.create(professor_name=new_professor_name)
-                course.course_professors.add(professor)
-
-            Review.objects.create(
-                review_user=request.user,
-                review_course=course,
-                review_professor=professor,
-                difficulty_score=difficulty_score,
-                time_score=time_score,
-                review_text=review_text
-            )
-
+        # Redirects the user to the 'search' page after submitting review
         return redirect('search')
 
     return render(request, 'review.html', {
@@ -477,13 +485,14 @@ def reset_password_confirm_view(request, uidb64, token):
         return render(request, 'Registration/reset_password_confirm.html', {
             'error': 'The password reset link is invalid or has expired.'
         })
+
 def course_lookup(request):
     query = request.GET.get('q', '').strip()
 
     courses = Course.objects.filter(
         Q(course_code__icontains=query) |
         Q(course_name__icontains=query)
-    ).annotate(
+    ).prefetch_related('course_professors').annotate(
         rank=Case(
             When(course_code__istartswith=query, then=Value(0)),
             When(course_code__icontains=query, then=Value(1)),
@@ -494,10 +503,22 @@ def course_lookup(request):
     ).order_by('rank', 'course_code')
 
     results = [
-        {'id': c.id, 'label': f'{c.course_code} - {c.course_name}'}
-        for c in courses[:5]
+        {
+            'id': course.id,
+            'label': f'{course.course_code} - {course.course_name}',
+            'professors': [
+                {
+                    'id': professor.id,
+                    'name': professor.professor_name,
+                }
+                for professor in course.course_professors.all()
+            ],
+        }
+        for course in courses[:5]
     ]
+
     return JsonResponse({'results': results})
+
 
 @login_required
 def my_profile(request):
@@ -532,26 +553,7 @@ def review_page(request):
         'review_course',
         'review_professor',
         'review_user__user_major'
-    ).annotate(
-        # distinct=True stops the two joins from multiplying each other's counts
-        upvote_count=Count('review_upvotes', distinct=True),
-        comment_count=Count('comments', distinct=True),
     )
-
-    # Whether the current user has upvoted each review (drives the filled heart)
-    if request.user.is_authenticated:
-        reviews = reviews.annotate(
-            user_upvoted=Exists(
-                Review.review_upvotes.through.objects.filter(
-                    review_id=OuterRef('pk'),
-                    user_id=request.user.pk,
-                )
-            )
-        )
-    else:
-        reviews = reviews.annotate(
-            user_upvoted=Value(False, output_field=BooleanField())
-        )
 
     # 1. Search across review text, course code/name, professor name, and author username
     if query:
@@ -570,7 +572,11 @@ def review_page(request):
         reviews = reviews.order_by('difficulty_score', '-review_date')
     elif sort_by == 'hardest':
         reviews = reviews.order_by('-difficulty_score', '-review_date')
-    else:  # Default to most recent
+    elif sort_by == 'popular':
+        reviews = reviews.annotate(
+            course_review_count=Count('review_course__review')
+        ).order_by('-course_review_count', '-review_date', '-id')
+    else:
         reviews = reviews.order_by('-review_date', '-id')
 
     # Paginate feed (e.g., 10 reviews per page)
@@ -582,104 +588,6 @@ def review_page(request):
         'query': query,
         'sort_by': sort_by,
     })
-
-# Comment and upvotes on reviews
-# How many comments to load each time "Show more" is clicked
-COMMENTS_PER_LOAD = 3
-COMMENT_MAX_LENGTH = 1000
-
-
-def _login_required_json():
-    return JsonResponse(
-        {'error': 'You must be logged in to do that.', 'login_url': reverse('login')},
-        status=401
-    )
-
-
-def _comment_to_dict(comment):
-    return {
-        'id': comment.id,
-        'user': comment.comment_user.username,
-        'text': comment.comment_text,
-        'date': comment.comment_date.strftime('%b %d, %Y'),
-    }
-
-
-@require_GET
-def review_comments(request, review_id):
-    """Return the next batch of comments for a review, oldest first.
-
-    Uses ?offset=N to say how many comments the page already has.
-    One extra comment is fetched to know whether a "Show more" button
-    is needed, without running a separate COUNT query.
-    """
-    review = get_object_or_404(Review, pk=review_id)
-
-    try:
-        offset = max(int(request.GET.get('offset', 0)), 0)
-    except ValueError:
-        offset = 0
-
-    batch = list(
-        review.comments.select_related('comment_user')
-        .order_by('comment_date', 'id')[offset:offset + COMMENTS_PER_LOAD + 1]
-    )
-
-    return JsonResponse({
-        'comments': [_comment_to_dict(c) for c in batch[:COMMENTS_PER_LOAD]],
-        'has_more': len(batch) > COMMENTS_PER_LOAD,
-    })
-
-
-@require_POST
-def add_comment(request, review_id):
-    """Post a new comment under a review."""
-    if not request.user.is_authenticated:
-        return _login_required_json()
-
-    review = get_object_or_404(Review, pk=review_id)
-    text = request.POST.get('comment_text', '').strip()
-
-    if not text:
-        return JsonResponse({'error': 'Comment cannot be blank.'}, status=400)
-    if len(text) > COMMENT_MAX_LENGTH:
-        return JsonResponse(
-            {'error': f'Comments can be at most {COMMENT_MAX_LENGTH} characters.'},
-            status=400
-        )
-
-    comment = Comment.objects.create(
-        comment_review=review,
-        comment_user=request.user,
-        comment_text=text
-    )
-
-    return JsonResponse({
-        'comment': _comment_to_dict(comment),
-        'comment_count': review.comments.count(),
-    }, status=201)
-
-
-@require_POST
-def toggle_upvote(request, review_id):
-    """Upvote a review, or remove the upvote if the user already upvoted it."""
-    if not request.user.is_authenticated:
-        return _login_required_json()
-
-    review = get_object_or_404(Review, pk=review_id)
-
-    if review.review_upvotes.filter(pk=request.user.pk).exists():
-        review.review_upvotes.remove(request.user)
-        upvoted = False
-    else:
-        review.review_upvotes.add(request.user)
-        upvoted = True
-
-    return JsonResponse({
-        'upvoted': upvoted,
-        'upvote_count': review.review_upvotes.count(),
-    })
-
 
 def calculator(request):
     #Course take average difficulty, average time, and number of reviews

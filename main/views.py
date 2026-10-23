@@ -26,19 +26,38 @@ from django.db.models import BooleanField
 
 
 
+
 def home(request):
     """Render the home page with the two most recent course reviews."""
-    # Pull related records in the same query so the template does not issue
-    # extra database queries for each review card.
-    recent_reviews = Review.objects.select_related(
-        'review_course', 
-        'review_professor', 
+    reviews = Review.objects.select_related(
+        'review_course',
+        'review_professor',
         'review_user__user_major'
-    ).order_by('-review_date', '-id')[:2]
+    ).annotate(
+        course_review_count=Count('review_course__review')
+    )
+
+    sort_by = request.GET.get('sort', 'recent')
+
+    if sort_by == 'popular':
+        reviews = reviews.order_by('-course_review_count', '-review_date', '-id')
+    else:
+        reviews = reviews.order_by('-review_date', '-id')
+
+    recent_reviews = reviews[:2]
+
+    popular = Course.objects.annotate(
+        review_count=Count('review')
+    ).filter(
+        review_count__gt=0
+    ).order_by('-review_count')[:4]
 
     return render(request, 'home.html', {
-        'recent_reviews': recent_reviews
+        'recent_reviews': recent_reviews,
+        'sort_by': sort_by,
+        'popular': popular,
     })
+
 
 @login_required
 def review(request):
@@ -563,8 +582,13 @@ def review_page(request):
         reviews = reviews.order_by('difficulty_score', '-review_date')
     elif sort_by == 'hardest':
         reviews = reviews.order_by('-difficulty_score', '-review_date')
+    elif sort_by == 'popular':
+        reviews = reviews.annotate(
+            course_review_count=Count('review_course__review')
+        ).order_by('-course_review_count', '-review_date', '-id')
     else:  # Default to most recent
         reviews = reviews.order_by('-review_date', '-id')
+
 
     # Paginate feed (e.g., 10 reviews per page)
     paginator = Paginator(reviews, 10)

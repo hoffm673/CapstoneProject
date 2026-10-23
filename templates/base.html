@@ -75,12 +75,6 @@
                     </li>
 
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'my_profile' %}">
-                            My Profile
-                        </a>
-                    </li>
-
-                    <li class="nav-item">
                         <a class="nav-link" href="{% url 'about' %}">
                             About
                         </a>
@@ -110,8 +104,8 @@
                                 {{ user.username }}
                             </a>
 
-                            <ul class="dropdown-menu dropdown-menu-end">
-
+                            <ul class="dropdown-menu dropdown-menu-end rounded-3 shadow-sm border-0 mt-2"
+        aria-labelledby="profileDropdown">
                                 <li>
                                     <a class="dropdown-item" href="{% url 'my_profile' %}">
                                         <i class="bi bi-person me-2"></i>

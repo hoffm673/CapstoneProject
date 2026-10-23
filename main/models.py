@@ -76,36 +76,6 @@ class Review(models.Model):
 
     # The date the review was posted
     review_date = models.DateField(auto_now_add=True)
-    # The users who have upvoted this review
-    # Stored as a list of users (not a plain number) so each user can only
-    # upvote a review once and can take their upvote back.
-    # The upvote count is just review.review_upvotes.count()
-    review_upvotes = models.ManyToManyField(
-        "User",
-        related_name="upvoted_reviews",
-        blank=True
-    )
-# Comment model
-class Comment(models.Model):
-    # The review the comment was posted under
-    # Deleting a review also deletes all of its comments
-    comment_review = models.ForeignKey(
-        Review,
-        on_delete=models.CASCADE,
-        related_name="comments"
-    )
-
-    # Who posted the comment
-    comment_user = models.ForeignKey("User", on_delete=models.CASCADE)
-
-    # The comment itself
-    comment_text = models.TextField(max_length=1000)
-
-    # When the comment was posted (date + time so comments on the same day stay in order)
-    comment_date = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"{self.comment_user} on review {self.comment_review_id}"
 
 
 # User

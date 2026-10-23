@@ -26,14 +26,33 @@ def home(request):
     """Render the home page with the two most recent course reviews."""
     # Pull related records in the same query so the template does not issue
     # extra database queries for each review card.
-    recent_reviews = Review.objects.select_related(
-        'review_course', 
-        'review_professor', 
+    reviews = Review.objects.select_related(
+        'review_course',
+        'review_professor',
         'review_user__user_major'
-    ).order_by('-review_date', '-id')[:2]
+    ).annotate(
+        course_review_count=Count('review_course__review')
+    )
+
+    sort_by = request.GET.get('sort', 'recent')
+
+    if sort_by == 'popular':
+        reviews = reviews.order_by('-course_review_count', '-review_date', '-id')
+    else:
+        reviews = reviews.order_by('-review_date', '-id')
+
+    recent_reviews = reviews[:2]
+
+    popular = Course.objects.annotate(
+        review_count=Count('review')
+    ).filter(
+        review_count__gt=0
+    ).order_by('-review_count')[:4]
 
     return render(request, 'home.html', {
-        'recent_reviews': recent_reviews
+        'recent_reviews': recent_reviews,
+        'sort_by': sort_by,
+        'popular': popular,
     })
 
 @login_required
@@ -466,13 +485,14 @@ def reset_password_confirm_view(request, uidb64, token):
         return render(request, 'Registration/reset_password_confirm.html', {
             'error': 'The password reset link is invalid or has expired.'
         })
+
 def course_lookup(request):
     query = request.GET.get('q', '').strip()
 
     courses = Course.objects.filter(
         Q(course_code__icontains=query) |
         Q(course_name__icontains=query)
-    ).annotate(
+    ).prefetch_related('course_professors').annotate(
         rank=Case(
             When(course_code__istartswith=query, then=Value(0)),
             When(course_code__icontains=query, then=Value(1)),
@@ -483,10 +503,22 @@ def course_lookup(request):
     ).order_by('rank', 'course_code')
 
     results = [
-        {'id': c.id, 'label': f'{c.course_code} - {c.course_name}'}
-        for c in courses[:5]
+        {
+            'id': course.id,
+            'label': f'{course.course_code} - {course.course_name}',
+            'professors': [
+                {
+                    'id': professor.id,
+                    'name': professor.professor_name,
+                }
+                for professor in course.course_professors.all()
+            ],
+        }
+        for course in courses[:5]
     ]
+
     return JsonResponse({'results': results})
+
 
 @login_required
 def my_profile(request):
@@ -540,7 +572,11 @@ def review_page(request):
         reviews = reviews.order_by('difficulty_score', '-review_date')
     elif sort_by == 'hardest':
         reviews = reviews.order_by('-difficulty_score', '-review_date')
-    else:  # Default to most recent
+    elif sort_by == 'popular':
+        reviews = reviews.annotate(
+            course_review_count=Count('review_course__review')
+        ).order_by('-course_review_count', '-review_date', '-id')
+    else:
         reviews = reviews.order_by('-review_date', '-id')
 
     # Paginate feed (e.g., 10 reviews per page)
@@ -551,6 +587,7 @@ def review_page(request):
         'reviews': page_obj,
         'query': query,
         'sort_by': sort_by,
+    })
 
 def calculator(request):
     #Course take average difficulty, average time, and number of reviews

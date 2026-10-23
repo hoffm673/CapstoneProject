@@ -77,7 +77,36 @@ class Review(models.Model):
     # The date the review was posted
     review_date = models.DateField(auto_now_add=True)
 
+    # Users who upvoted this review
+    review_upvotes = models.ManyToManyField(
+        "User",
+        blank=True,
+        related_name="upvoted_reviews"
+    )
 
+# Comment model
+class Comment(models.Model):
+    # The review this comment belongs to
+    comment_review = models.ForeignKey(
+        Review,
+        on_delete=models.CASCADE,
+        related_name="comments"
+    )
+
+    # The user who wrote the comment
+    comment_user = models.ForeignKey(
+        "User",
+        on_delete=models.CASCADE
+    )
+
+    # The comment text
+    comment_text = models.CharField(max_length=1000)
+
+    # The date and time the comment was posted
+    comment_date = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.comment_user.username}: {self.comment_text[:50]}"
 # User
 # Imported AbstractUser from Django, it'll handle ID, username, password, & email
 class User(AbstractUser):

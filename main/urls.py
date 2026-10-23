@@ -21,5 +21,27 @@ urlpatterns = [
 
 # Password Reset
     path('forgot-password/', views.forgot_password_view, name='forgot_password'),
-    path('reset-password/<uidb64>/<token>/', views.reset_password_confirm_view, name='reset_password_confirm')
+    path('reset-password/<uidb64>/<token>/', views.reset_password_confirm_view, name='reset_password_confirm'),
+
+path(
+    'reviews/<int:review_id>/upvote/',
+    views.toggle_upvote,
+    name='toggle_upvote'
+),
+path(
+    'reviews/<int:review_id>/comments/',
+    views.review_comments,
+    name='review_comments'
+),
+path(
+    'reviews/<int:review_id>/comments/add/',
+    views.add_comment,
+    name='add_comment'
+),
+
+path(
+    'reviews/<int:review_id>/upvote/',
+    views.toggle_upvote,
+    name='toggle_upvote'
+),
 ]

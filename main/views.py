@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
 from django.db.models import Avg, Count
+from django.db import transaction
 from .models import User
 from .models import Review
 from .models import Course, Professor
@@ -30,8 +31,8 @@ def home(request):
     # Pull related records in the same query so the template does not issue
     # extra database queries for each review card.
     recent_reviews = Review.objects.select_related(
-        'review_course', 
-        'review_professor', 
+        'review_course',
+        'review_professor',
         'review_user__user_major'
     ).order_by('-review_date', '-id')[:2]
 
@@ -41,69 +42,75 @@ def home(request):
 
 @login_required
 def review(request):
-    """Render the review submission form with selectable courses and professors."""
+    """Submit a review, optionally adding a professor missing from the list."""
     courses = Course.objects.all().order_by('course_code')
     professors = Professor.objects.all().order_by('professor_name')
 
-    # Takes the inputs from the review form (POST) and adds them in the database
     if request.method == 'POST':
         course_id = request.POST.get('course')
-        professor_id = request.POST.get('professor')
-        difficulty_score = request.POST.get('difficulty_score')
-        time_score = request.POST.get('time_score')
+        professor_id = request.POST.get('professor', '')
+        new_professor_name = ' '.join(request.POST.get('new_professor_name', '').split())
         review_text = request.POST.get('review_text', '').strip()
+
+        context = {'courses': courses, 'professors': professors}
 
         try:
             course = Course.objects.get(pk=course_id)
-            professor = Professor.objects.get(pk=professor_id)
-        except (Course.DoesNotExist, Professor.DoesNotExist, TypeError, ValueError):
-            return render(request, 'review.html', {
-                'courses': courses,
-                'professors': professors,
-                'error': 'Select a valid course and professor.',
-            })
-
-        if not course.course_professors.filter(pk=professor.pk).exists():
-            return render(request, 'review.html', {
-                'courses': courses,
-                'professors': professors,
-                'error': 'Select a professor who teaches the selected course.',
-            })
+        except (Course.DoesNotExist, TypeError, ValueError):
+            context['error'] = 'Select a valid course.'
+            return render(request, 'review.html', context)
 
         try:
-            difficulty_score = int(difficulty_score)
-            time_score = int(time_score)
+            difficulty_score = int(request.POST.get('difficulty_score'))
+            time_score = int(request.POST.get('time_score'))
         except (TypeError, ValueError):
             difficulty_score = time_score = None
 
-        if (
-            difficulty_score not in range(1, 6)
-            or time_score not in range(1, 6)
-        ):
-            return render(request, 'review.html', {
-                'courses': courses,
-                'professors': professors,
-                'error': 'Both ratings must be whole numbers from 1 to 5.',
-            })
+        if difficulty_score not in range(1, 6) or time_score not in range(1, 6):
+            context['error'] = 'Both ratings must be whole numbers from 1 to 5.'
+            return render(request, 'review.html', context)
 
         if not review_text:
-            return render(request, 'review.html', {
-                'courses': courses,
-                'professors': professors,
-                'error': 'Review text cannot be blank.',
-            })
+            context['error'] = 'Review text cannot be blank.'
+            return render(request, 'review.html', context)
 
-        # Creates a new Review object using the data collected from the form (POST)
-        Review.objects.create(
-            review_user=request.user,
-            review_course=course,
-            review_professor=professor,
-            difficulty_score=difficulty_score,
-            time_score=time_score,
-            review_text=review_text
-        )
+        if professor_id == '__new__':
+            if not new_professor_name:
+                context['error'] = 'Enter the professor’s name.'
+                return render(request, 'review.html', context)
+            if len(new_professor_name) > 100:
+                context['error'] = 'Professor names must be 100 characters or fewer.'
+                return render(request, 'review.html', context)
+        else:
+            try:
+                professor = Professor.objects.get(pk=professor_id)
+            except (Professor.DoesNotExist, TypeError, ValueError):
+                context['error'] = 'Select a valid professor or choose the add-new option.'
+                return render(request, 'review.html', context)
 
-        # Redirects the user to the 'search' page after submitting review
+            if not course.course_professors.filter(pk=professor.pk).exists():
+                context['error'] = 'Select a professor who teaches the selected course.'
+                return render(request, 'review.html', context)
+
+        # Save the professor/course relationship and the review together.
+        with transaction.atomic():
+            if professor_id == '__new__':
+                professor = Professor.objects.filter(
+                    professor_name__iexact=new_professor_name
+                ).first()
+                if professor is None:
+                    professor = Professor.objects.create(professor_name=new_professor_name)
+                course.course_professors.add(professor)
+
+            Review.objects.create(
+                review_user=request.user,
+                review_course=course,
+                review_professor=professor,
+                difficulty_score=difficulty_score,
+                time_score=time_score,
+                review_text=review_text
+            )
+
         return redirect('search')
 
     return render(request, 'review.html', {

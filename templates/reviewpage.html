@@ -207,22 +207,42 @@
                                         </p>
                                     {% endif %}
 
+
                                     <!-- RATINGS -->
                                     <div class="d-flex flex-wrap gap-2 mb-3">
-                                        <span class="badge rounded-pill border
-                                                     text-dark fw-normal px-3 py-2"
-                                              style="background-color: var(--uwm-light);">
+
+                                        <!-- Difficulty Rating -->
+                                        <span class="badge rounded-pill fw-normal px-3 py-2
+                                            {% if review.difficulty_score <= 2 %}
+                                                bg-success-subtle text-success-emphasis border border-success-subtle
+                                            {% elif review.difficulty_score == 3 %}
+                                                bg-warning-subtle text-warning-emphasis border border-warning-subtle
+                                            {% else %}
+                                                bg-danger-subtle text-danger-emphasis border border-danger-subtle
+                                            {% endif %}">
+
                                             <i class="bi bi-bar-chart me-1"></i>
                                             Difficulty {{ review.difficulty_score }}/5
+
                                         </span>
 
-                                        <span class="badge rounded-pill border
-                                                     text-dark fw-normal px-3 py-2"
-                                              style="background-color: var(--uwm-light);">
+                                        <!-- Time Consumption Rating -->
+                                        <span class="badge rounded-pill fw-normal px-3 py-2
+                                            {% if review.time_score <= 2 %}
+                                                bg-success-subtle text-success-emphasis border border-success-subtle
+                                            {% elif review.time_score == 3 %}
+                                                bg-warning-subtle text-warning-emphasis border border-warning-subtle
+                                            {% else %}
+                                                bg-danger-subtle text-danger-emphasis border border-danger-subtle
+                                            {% endif %}">
+
                                             <i class="bi bi-clock me-1"></i>
                                             Time {{ review.time_score }}/5
+
                                         </span>
+
                                     </div>
+
 
                                     <!-- REVIEW TEXT -->
                                     <p class="text-dark mb-3" style="white-space: pre-line;">{{ review.review_text }}</p>

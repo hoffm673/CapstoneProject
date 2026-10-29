@@ -1,3 +1,4 @@
+
 {% extends "base.html" %}
 {% load static %}
 
@@ -26,26 +27,86 @@
         <form method="POST">
             {% csrf_token %}
 
+            <!-- Course Selection -->
             <div class="mb-3">
                 <label for="course" class="form-label">Course</label>
                 <select id="course" name="course" required></select>
             </div>
 
+            <!-- Professor Selection -->
             <div class="mb-3">
                 <label for="professor" class="form-label">Professor</label>
-                <select class="form-select" id="professor" name="professor" required>
-                    <option value="" selected disabled>Select a professor</option>
+
+                <select
+                    class="form-select"
+                    id="professor"
+                    name="professor"
+                    required
+                >
+                    <option value="" selected disabled>
+                        Select a professor
+                    </option>
+
                     {% for professor in professors %}
-                        <option value="{{ professor.id }}">{{ professor.professor_name }}</option>
+                        <option value="{{ professor.id }}">
+                            {{ professor.professor_name }}
+                        </option>
                     {% endfor %}
+
+                    <!-- Used internally when adding a new professor -->
+                    <option value="__new__" hidden>
+                        Adding a new professor...
+                    </option>
                 </select>
+
+                <!-- Add Professor Button -->
+                <div class="text-end mt-2">
+                    <button
+                        type="button"
+                        id="add-professor-btn"
+                        class="btn btn-link btn-sm p-0"
+                    >
+                        + Professor not listed? Add a new professor
+                    </button>
+                </div>
             </div>
 
+            <!-- New Professor Input -->
+            <div class="mb-3 d-none" id="new-professor-section">
+                <label for="new_professor_name" class="form-label">
+                    Professor's Name
+                </label>
+
+                <input
+                    type="text"
+                    class="form-control"
+                    id="new_professor_name"
+                    name="new_professor_name"
+                    maxlength="100"
+                    placeholder="e.g., Dr. Jane Smith"
+                >
+
+                <small class="text-muted">
+                    Enter the professor's name if they are not listed above.
+                </small>
+            </div>
+
+            <!-- Difficulty and Time Ratings -->
             <div class="row mb-3">
+
                 <div class="col">
-                    <label for="difficulty_score" class="form-label">Difficulty (1-5)</label>
-                    <select class="form-select" id="difficulty_score" name="difficulty_score" required>
+                    <label for="difficulty_score" class="form-label">
+                        Difficulty (1-5)
+                    </label>
+
+                    <select
+                        class="form-select"
+                        id="difficulty_score"
+                        name="difficulty_score"
+                        required
+                    >
                         <option value="" selected disabled>Rate it</option>
+
                         {% for i in "12345" %}
                             <option value="{{ i }}">{{ i }}</option>
                         {% endfor %}
@@ -53,18 +114,32 @@
                 </div>
 
                 <div class="col">
-                    <label for="time_score" class="form-label">Time Commitment (1-5)</label>
-                    <select class="form-select" id="time_score" name="time_score" required>
+                    <label for="time_score" class="form-label">
+                        Time Commitment (1-5)
+                    </label>
+
+                    <select
+                        class="form-select"
+                        id="time_score"
+                        name="time_score"
+                        required
+                    >
                         <option value="" selected disabled>Rate it</option>
+
                         {% for i in "12345" %}
                             <option value="{{ i }}">{{ i }}</option>
                         {% endfor %}
                     </select>
                 </div>
+
             </div>
 
+            <!-- Review Text -->
             <div class="mb-3">
-                <label for="review_text" class="form-label">Your Review</label>
+                <label for="review_text" class="form-label">
+                    Your Review
+                </label>
+
                 <textarea
                     class="form-control"
                     id="review_text"
@@ -75,41 +150,97 @@
                 ></textarea>
             </div>
 
+            <!-- Submit Button -->
             <button type="submit" class="btn btn-primary w-100">
                 Submit Review
             </button>
 
         </form>
-
     </div>
-
 </div>
-<link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+
+<!-- Tom Select CSS -->
+<link
+    href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css"
+    rel="stylesheet"
+>
+
+<!-- Tom Select JavaScript -->
 <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
 
 <style>
-    /* Keep the results list short so it doesn't cover the rest of the form */
-    .ts-dropdown .ts-dropdown-content { max-height: 180px; }
+    .ts-dropdown .ts-dropdown-content {
+        max-height: 180px;
+    }
 </style>
 
 <script>
+    // Searchable course dropdown
     new TomSelect('#course', {
         valueField: 'id',
         labelField: 'label',
         placeholder: 'Search for a course...',
         maxOptions: 5,
         loadThrottle: 250,
-        score: function () { return function () { return 1; }; },
+
+        score: function () {
+            return function () {
+                return 1;
+            };
+        },
+
         sortField: '$order',
+
         load: function (query, callback) {
-            if (!query.length) return callback();   // wait until they type something
+            if (!query.length) {
+                return callback();
+            }
+
             this.clearOptions();
+
             fetch(`{% url 'course_lookup' %}?q=${encodeURIComponent(query)}`)
                 .then(response => response.json())
                 .then(data => callback(data.results))
                 .catch(() => callback());
         }
     });
+
+    // Professor selection
+    const professorDropdown = document.getElementById('professor');
+    const newProfessorSection = document.getElementById('new-professor-section');
+    const newProfessorInput = document.getElementById('new_professor_name');
+    const addProfessorBtn = document.getElementById('add-professor-btn');
+
+    function toggleNewProfessorInput() {
+        const addingNew = professorDropdown.value === '__new__';
+
+        newProfessorSection.classList.toggle('d-none', !addingNew);
+        newProfessorInput.required = addingNew;
+
+        if (addingNew) {
+            addProfessorBtn.textContent = 'Choose an existing professor instead';
+        } else {
+            addProfessorBtn.textContent = '+ Professor not listed? Add a new professor';
+            newProfessorInput.value = '';
+        }
+    }
+
+    // Switch between adding a professor and selecting an existing one
+    addProfessorBtn.addEventListener('click', function () {
+        if (professorDropdown.value === '__new__') {
+            professorDropdown.value = '';
+        } else {
+            professorDropdown.value = '__new__';
+        }
+
+        toggleNewProfessorInput();
+    });
+
+    // Update the form if the professor selection changes
+    professorDropdown.addEventListener('change', toggleNewProfessorInput);
+
+    // Set initial state
+    toggleNewProfessorInput();
 </script>
 
 {% endblock %}

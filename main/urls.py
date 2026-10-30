@@ -12,6 +12,7 @@ urlpatterns = [
     path('profile/', views.my_profile, name='my_profile'),
     path('reviews/<int:review_id>/edit/', views.edit_review, name='edit_review'),
     path('reviews/<int:review_id>/delete/', views.delete_review, name='delete_review'),
+    path('privacy-policy/', views.privacy_policy, name='privacy_policy'),
 
 #login / register
     path('login/', views.login_view, name='login'),
@@ -46,4 +47,5 @@ path(
     views.toggle_upvote,
     name='toggle_upvote'
 ),
+
 ]

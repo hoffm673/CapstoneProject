@@ -125,3 +125,25 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.username
+
+
+# Similar course link, filled in by `python manage.py build_similar_courses`
+# (see main/similarity.py). One row = "similar_course is the Nth best match for course".
+class SimilarCourse(models.Model):
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name="similar_links")
+    similar_course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name="+")
+
+    # Cosine similarity from 0 (nothing in common) to 1 (identical text)
+    score = models.FloatField()
+
+    # 1 = best match
+    rank = models.PositiveSmallIntegerField()
+
+    class Meta:
+        ordering = ["course", "rank"]
+        constraints = [
+            models.UniqueConstraint(fields=["course", "similar_course"], name="unique_similar_course"),
+        ]
+
+    def __str__(self):
+        return f"{self.course.course_code} -> {self.similar_course.course_code} ({self.score:.2f})"

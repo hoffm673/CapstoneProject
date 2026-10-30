@@ -22,7 +22,7 @@ from django.db.models import Q
 from django.http import JsonResponse
 from django.template.loader import render_to_string
 from django.db.models import Q, Case, When, Value, IntegerField
-from .models import Course, Professor, Comment
+from .models import Course, Professor, SimilarCourse
 from django.db.models import Exists, OuterRef
 from django.views.decorators.http import require_GET, require_POST, require_http_methods
 from django.db.models import BooleanField
@@ -236,10 +236,32 @@ def course_detail(request, course_id):
         average_time=Avg('time_score')
     )
 
+    # Precomputed by `manage.py build_similar_courses`. Pull each similar
+    # course's review averages in the same query so cards can show them.
+    similar_courses = [
+        link.similar_course
+        for link in SimilarCourse.objects.filter(course=course)
+        .select_related('similar_course')
+        .order_by('rank')[:4]
+    ]
+    similar_stats = {
+        row['id']: row
+        for row in Course.objects.filter(pk__in=[c.pk for c in similar_courses])
+        .values('id')
+        .annotate(
+            review_count=Count('review'),
+            average_difficulty=Avg('review__difficulty_score'),
+            average_time=Avg('review__time_score'),
+        )
+    }
+    for similar in similar_courses:
+        similar.stats = similar_stats.get(similar.pk, {})
+
     return render(request, 'course_detail.html', {
         'course': course,
         'reviews': reviews,
-        'review_stats': review_stats
+        'review_stats': review_stats,
+        'similar_courses': similar_courses,
     })
 
 def about(request):

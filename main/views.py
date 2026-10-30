@@ -818,3 +818,6 @@ def calculator(request):
         'courses': courses,
         'saved_course_ids': saved_course_ids,
     })
+
+def privacy_policy(request):
+    return render(request, 'privacy_policy.html')

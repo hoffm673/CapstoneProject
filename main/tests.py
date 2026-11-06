@@ -196,3 +196,51 @@ class ReviewSubmissionTests(TestCase):
                 self.assertEqual(response.status_code, 200)
                 self.assertContains(response, "Select a valid course and professor")
                 self.assertEqual(Review.objects.count(), 0)
+
+
+class ReviewDeletionTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="reviewer", password="password")
+        self.other_user = User.objects.create_user(username="other", password="password")
+        self.professor = Professor.objects.create(professor_name="Dr. Review")
+        self.course = Course.objects.create(
+            course_name="Test Course",
+            course_code="TEST 101",
+            course_credits=3,
+        )
+        self.review = Review.objects.create(
+            review_user=self.user,
+            review_course=self.course,
+            review_professor=self.professor,
+            difficulty_score=3,
+            time_score=4,
+            review_text="A useful course.",
+        )
+        self.client.force_login(self.user)
+
+    def test_owner_can_delete_review_from_profile(self):
+        response = self.client.post(
+            reverse("delete_review", args=[self.review.id])
+        )
+
+        self.assertRedirects(response, reverse("my_profile"))
+        self.assertFalse(Review.objects.filter(pk=self.review.id).exists())
+
+    def test_user_cannot_delete_another_users_review(self):
+        self.review.review_user = self.other_user
+        self.review.save(update_fields=["review_user"])
+
+        response = self.client.post(
+            reverse("delete_review", args=[self.review.id])
+        )
+
+        self.assertEqual(response.status_code, 404)
+        self.assertTrue(Review.objects.filter(pk=self.review.id).exists())
+
+    def test_delete_review_requires_post(self):
+        response = self.client.get(
+            reverse("delete_review", args=[self.review.id])
+        )
+
+        self.assertEqual(response.status_code, 405)
+        self.assertTrue(Review.objects.filter(pk=self.review.id).exists())

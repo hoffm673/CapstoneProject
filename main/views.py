@@ -17,6 +17,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db.models import Q
 from django.http import JsonResponse
+from django.views.decorators.http import require_POST
 from django.template.loader import render_to_string
 from django.db.models import Q, Case, When, Value, IntegerField
 
@@ -474,3 +475,11 @@ def my_profile(request):
         'reviews': reviews,
         'username_error': username_error
     })
+
+
+@login_required
+@require_POST
+def delete_review(request, review_id):
+    review = get_object_or_404(Review, pk=review_id, review_user=request.user)
+    review.delete()
+    return redirect('my_profile')

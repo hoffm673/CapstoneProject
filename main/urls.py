@@ -8,6 +8,7 @@ urlpatterns = [
     path('courses/<int:course_id>/', views.course_detail, name='course_detail'),
     path('courses/lookup/', views.course_lookup, name='course_lookup'),
     path('profile/', views.my_profile, name='my_profile'),
+    path('reviews/<int:review_id>/delete/', views.delete_review, name='delete_review'),
 
 #login / register
     path('login/', views.login_view, name='login'),

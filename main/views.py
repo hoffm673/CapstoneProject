@@ -22,7 +22,7 @@ from django.db.models import Q
 from django.http import JsonResponse
 from django.template.loader import render_to_string
 from django.db.models import Q, Case, When, Value, IntegerField
-from .models import Course, Professor, Comment, ReviewTag, SimilarCourse
+from .models import Course, Professor, Comment, ReviewTag, SimilarCourse, CourseAISummary
 from django.db.models import Exists, OuterRef
 from django.views.decorators.http import require_GET, require_POST, require_http_methods
 from django.db.models import BooleanField
@@ -306,6 +306,7 @@ def course_detail(request, course_id):
         'reviews': reviews,
         'review_stats': review_stats,
         'similar_courses': similar_courses,
+        'ai_summary': CourseAISummary.objects.filter(course=course).first(),
     })
 
 def about(request):

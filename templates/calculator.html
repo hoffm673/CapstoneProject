@@ -82,8 +82,7 @@
     </div>
 
     <div class="row g-4">
-        <!-- Left: Searchable Course Selector (PAGINATED) -->
-        <div class="col-lg-5">
+        <div class="col-lg-4"> 
             <div class="card shadow-sm">
                 <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Find Courses</h5>
@@ -101,7 +100,7 @@
                     </div>
 
                     <!-- Course Results List -->
-                    <div id="course-results-list" class="list-group mb-3" style="min-height: 400px;">
+                    <div id="course-results-list" class="list-group mb-3">
                         <!-- Filtered dynamically by JavaScript -->
                     </div>
 
@@ -122,7 +121,7 @@
         </div>
 
         <!-- Right: Current Schedule -->
-        <div class="col-lg-7">
+        <div class="col-lg-8">
             <div class="card shadow-sm">
                 <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Your Selected Schedule</h5>
@@ -190,13 +189,23 @@
         {% endfor %}
     ];
 
+    allCourses.sort((a, b) => {
+        const aHasReviews = a.reviews > 0 ? 1 : 0;
+        const bHasReviews = b.reviews > 0 ? 1 : 0;
+        
+        if (aHasReviews !== bHasReviews) {
+            return bHasReviews - aHasReviews; // Pushes courses with reviews to the top
+        }
+        return a.code.localeCompare(b.code); // Sorts the rest alphabetically
+    });
+
     const savedCourseIds = {{ saved_course_ids|safe }};
     let schedule = [];
     let filteredCourses = [];
     
     // Pagination Variables
     let currentPage = 1;
-    const coursesPerPage = 20;
+    const coursesPerPage = 8;
 
     // DOM Elements
     const searchInput = document.getElementById('course-search-input');

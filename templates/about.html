@@ -1,25 +1,129 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
-
 {% extends "base.html" %}
 
-{% block title %}About{% endblock %}
+{% block title %}About | UWM Course Load Calculator{% endblock %}
 
 {% block content %}
+<section class="bg-dark text-white py-5">
+    <div class="container py-lg-4">
+        <div class="row">
+            <div class="col-lg-8">
+                <p class="text-uppercase fw-bold small text-warning mb-3">About the project</p>
+                <h1 class="display-4 fw-bold mb-3">Plan your semester with more confidence.</h1>
+                <p class="lead text-white-50 mb-4">
+                    Choosing a course is easier when you know what to expect.
+                    Find course details and learn from other UWM students' experiences.
+                </p>
+                <a href="{% url 'search' %}" class="btn btn-primary btn-lg me-2 mb-2">
+                    <i class="bi bi-search me-2"></i>Explore courses
+                </a>
+                <a href="{% url 'review' %}" class="btn btn-outline-light btn-lg mb-2">
+                    <i class="bi bi-pencil-square me-2"></i>Share your experience
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
 
-    <h1>About</h1>
+<div class="container py-5">
+    <section class="row g-4 align-items-stretch mb-5">
+        <div class="col-lg-5">
+            <p class="text-uppercase fw-bold small text-muted mb-2">Why we built it</p>
+            <h2 class="h2 fw-bold mb-3">A clearer picture of the workload.</h2>
+            <p class="text-muted mb-0">
+                Course catalogs tell you what a class covers, but they may not tell
+                you how students experience its pace and workload. This project brings
+                course information and student feedback together to help you make a
+                more informed choice.
+            </p>
+        </div>
+        <div class="col-lg-7">
+            <div class="row g-3 h-100">
+                <div class="col-md-4">
+                    <article class="card h-100 shadow-sm">
+                        <div class="card-body">
+                            <i class="bi bi-journal-text fs-3 text-warning"></i>
+                            <h3 class="h5 fw-bold mt-3">Course details</h3>
+                            <p class="text-muted small mb-0">Review course descriptions, credits, and listed instructors.</p>
+                        </div>
+                    </article>
+                </div>
+                <div class="col-md-4">
+                    <article class="card h-100 shadow-sm">
+                        <div class="card-body">
+                            <i class="bi bi-bar-chart-line fs-3 text-warning"></i>
+                            <h3 class="h5 fw-bold mt-3">Student ratings</h3>
+                            <p class="text-muted small mb-0">See reported difficulty and time commitment at a glance.</p>
+                        </div>
+                    </article>
+                </div>
+                <div class="col-md-4">
+                    <article class="card h-100 shadow-sm">
+                        <div class="card-body">
+                            <i class="bi bi-chat-left-text fs-3 text-warning"></i>
+                            <h3 class="h5 fw-bold mt-3">Peer insight</h3>
+                            <p class="text-muted small mb-0">Read students' perspectives and practical advice.</p>
+                        </div>
+                    </article>
+                </div>
+            </div>
+        </div>
+    </section>
 
-    <p>
-        The UWM Course Load Calculator helps students understand
-        the difficulty and time commitment of UWM courses.
-    </p>
+    <section class="bg-white border rounded-3 p-4 p-lg-5 mb-5">
+        <div class="row g-4 align-items-center">
+            <div class="col-lg-4">
+                <p class="text-uppercase fw-bold small text-muted mb-2">How it works</p>
+                <h2 class="h2 fw-bold mb-0">Three steps to get started.</h2>
+            </div>
+            <div class="col-lg-8">
+                <div class="row g-4">
+                    <div class="col-md-4">
+                        <span class="badge rounded-pill text-bg-dark mb-2">01</span>
+                        <h3 class="h5 fw-bold">Find a course</h3>
+                        <p class="text-muted small mb-0">Search by course name or code.</p>
+                    </div>
+                    <div class="col-md-4">
+                        <span class="badge rounded-pill text-bg-dark mb-2">02</span>
+                        <h3 class="h5 fw-bold">Compare feedback</h3>
+                        <p class="text-muted small mb-0">Explore ratings and written reviews.</p>
+                    </div>
+                    <div class="col-md-4">
+                        <span class="badge rounded-pill text-bg-dark mb-2">03</span>
+                        <h3 class="h5 fw-bold">Share your experience</h3>
+                        <p class="text-muted small mb-0">Help other students by leaving a review.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
 
+    <section class="row g-4">
+        <div class="col-lg-7">
+            <h2 class="h3 fw-bold">Understanding the ratings</h2>
+            <p class="text-muted">
+                Students rate both difficulty and time commitment on a five-point scale.
+                These scores summarize individual experiences, not a promise of how a
+                course will feel for everyone.
+            </p>
+        </div>
+        <div class="col-lg-5">
+            <div class="d-flex gap-3 mb-3">
+                <span class="badge text-bg-light border align-self-start">1</span>
+                <p class="mb-0"><strong>Lower rating</strong><br><span class="text-muted small">Easier material or less time outside class.</span></p>
+            </div>
+            <div class="d-flex gap-3">
+                <span class="badge text-bg-dark align-self-start">5</span>
+                <p class="mb-0"><strong>Higher rating</strong><br><span class="text-muted small">More challenging material or more time outside class.</span></p>
+            </div>
+        </div>
+    </section>
+
+    <section class="bg-warning-subtle border rounded-3 p-4 p-lg-5 mt-5 text-center">
+        <h2 class="h3 fw-bold">Your experience can help someone else.</h2>
+        <p class="text-muted mb-4">Add your perspective to the student community.</p>
+        <a href="{% url 'review' %}" class="btn btn-primary">
+            <i class="bi bi-pencil-square me-2"></i>Leave a review
+        </a>
+    </section>
+</div>
 {% endblock %}
-
-</body>
-</html>

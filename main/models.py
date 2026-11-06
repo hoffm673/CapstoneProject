@@ -1,3 +1,4 @@
+
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.contrib.auth.models import AbstractUser
@@ -43,8 +44,25 @@ class Course(models.Model):
         return self.course_code + " - " + self.course_name
 
 
+# Review Tag model
+class ReviewTag(models.Model):
+    # A tag that students can attach to their reviews
+    tag_name = models.CharField(max_length=50, unique=True)
+
+    def __str__(self):
+        return self.tag_name
+
+
 # Review model
 class Review(models.Model):
+
+    # Tags selected by the student when submitting their review
+    review_tags = models.ManyToManyField(
+        ReviewTag,
+        blank=True,
+        related_name='reviews'
+    )
+
     # Who the review is posted by
     # This is used to also see the reviewer's major
     review_user = models.ForeignKey("User",on_delete=models.CASCADE)
@@ -84,6 +102,7 @@ class Review(models.Model):
         related_name="upvoted_reviews"
     )
 
+
 # Comment model
 class Comment(models.Model):
     # The review this comment belongs to
@@ -107,6 +126,8 @@ class Comment(models.Model):
 
     def __str__(self):
         return f"{self.comment_user.username}: {self.comment_text[:50]}"
+
+
 # User
 # Imported AbstractUser from Django, it'll handle ID, username, password, & email
 class User(AbstractUser):

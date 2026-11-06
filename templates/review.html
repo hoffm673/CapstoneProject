@@ -134,6 +134,35 @@
 
             </div>
 
+            <!-- Review Tags -->
+            <div class="mb-3">
+                <label class="form-label">Review Tags (Optional)</label>
+
+                <p class="text-muted small">
+                    Select any tags that describe your experience.
+                </p>
+
+                <div class="d-flex flex-wrap gap-2">
+                    {% for tag in tags %}
+                        <input
+                            type="checkbox"
+                            class="btn-check"
+                            name="review_tags"
+                            value="{{ tag.id }}"
+                            id="tag-{{ tag.id }}"
+                            autocomplete="off"
+                        >
+
+                        <label
+                            class="btn btn-outline-primary btn-sm"
+                            for="tag-{{ tag.id }}"
+                        >
+                            {{ tag.tag_name }}
+                        </label>
+                    {% endfor %}
+                </div>
+            </div>
+
             <!-- Review Text -->
             <div class="mb-3">
                 <label for="review_text" class="form-label">
@@ -244,3 +273,4 @@
 </script>
 
 {% endblock %}
+

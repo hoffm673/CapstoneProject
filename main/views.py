@@ -6,7 +6,7 @@ from django.db import transaction
 from django.db.models import Avg, Count
 from .models import User
 from .models import Review
-from .models import Course, Professor, ReviewTag
+from .models import Course, Professor, ReviewTag, Major
 from django.core.mail import send_mail
 import re
 import random
@@ -161,69 +161,101 @@ def logout_view(request):
 COURSES_PER_PAGE = 20
 
 def search(request):
-    """Render a paginated course list, optionally filtered by a search query."""
-    query = request.GET.get('query', '').strip()
-    department = request.GET.get('department', '').strip()
-    professor_id = request.GET.get('professor', '').strip()
-    credits = request.GET.get('credits', '').strip()
-    difficulty = request.GET.get('difficulty', '').strip()
+    """Render a paginated course list, filtered by query/major and prioritized."""
+    query_str = request.GET.get('query', '').strip()
+    dept_code = request.GET.get('department', '').strip()
+    prof_filter = request.GET.get('professor', '').strip()
+    credit_filter = request.GET.get('credits', '').strip()
+    diff_filter = request.GET.get('difficulty', '').strip()
+    selected_major = request.GET.get('major', '').strip()
 
-    # Base queryset with annotations for average difficulty
     courses = Course.objects.prefetch_related('course_professors').annotate(
         avg_difficulty=Avg('review__difficulty_score')
-    ).order_by('course_code')
-    if query:
-        courses = courses.filter(
-            Q(course_code__icontains=query) |
-            Q(course_name__icontains=query) |
-            Q(course_professors__professor_name__icontains=query)
-        ).distinct()
-
-        # 2. Filter by Department (matching the prefix of course_code, e.g., "COMP SCI")
-    if department:
-        courses = courses.filter(course_code__icontains=department)
-
-        # 3. Filter by Professor ID
-    if professor_id:
-        courses = courses.filter(course_professors__id=professor_id)
-
-        # 4. Filter by Credits
-    if credits:
-        courses = courses.filter(course_credits=credits)
-
-        # 5. Filter by Difficulty (matching the bucket range, e.g., 3.0 to < 4.0)
-    if difficulty:
-        diff_float = float(difficulty)
-        courses = courses.filter(avg_difficulty__gte=diff_float, avg_difficulty__lt=diff_float + 1.0)
-
-        courses = courses.distinct()
-    paginator = Paginator(courses, COURSES_PER_PAGE)
-    # get_page handles bad/out-of-range page numbers gracefully
-    page_obj = paginator.get_page(request.GET.get('page'))
-
-    # Shows something like: 1 ... 4 5 [6] 7 8 ... 20
-    page_range = paginator.get_elided_page_range(
-        page_obj.number, on_each_side=2, on_ends=1
     )
 
-    # Data to populate dropdown filters in your HTML template
-    professors = Professor.objects.all().order_by('professor_name')
-    departments = sorted(
-        list(set([code.split(' ')[0] for code in Course.objects.values_list('course_code', flat=True)])))
+    if query_str:
+        courses = courses.filter(
+            Q(course_code__icontains=query_str) |
+            Q(course_name__icontains=query_str) |
+            Q(course_professors__professor_name__icontains=query_str)
+        ).distinct()
+
+    if selected_major:
+        courses = courses.filter(major__iexact=selected_major)
+
+    if dept_code:
+        courses = courses.filter(course_code__icontains=dept_code)
+
+    if prof_filter:
+        courses = courses.filter(course_professors__id=prof_filter)
+
+    if credit_filter:
+        courses = courses.filter(course_credits=credit_filter)
+
+    if diff_filter:
+        try:
+            d_val = float(diff_filter)
+            courses = courses.filter(
+                avg_difficulty__gte=d_val,
+                avg_difficulty__lt=d_val + 1.0
+            )
+        except ValueError:
+            pass
+
+    courses = courses.distinct()
+
+    # Determine priority major cleanly without type mismatch exceptions
+    target_major_name = None
+    if request.user.is_authenticated and request.user.user_major:
+        target_major_name = request.user.user_major.major_name
+    else:
+        top_major_query = (
+            User.objects.filter(user_major__isnull=False)
+            .values('user_major__major_name')
+            .annotate(cnt=Count('id'))
+            .order_by('-cnt')
+            .first()
+        )
+        if top_major_query:
+            target_major_name = top_major_query.get('user_major__major_name')
+
+    if target_major_name:
+        courses = courses.annotate(
+            is_priority=Case(
+                When(major__iexact=target_major_name, then=Value(0)),
+                default=Value(1),
+                output_field=IntegerField()
+            )
+        ).order_by('is_priority', 'course_code')
+    else:
+        courses = courses.order_by('course_code')
+
+    paginator = Paginator(courses, COURSES_PER_PAGE)
+    page_obj = paginator.get_page(request.GET.get('page'))
+    page_range = paginator.get_elided_page_range(page_obj.number, on_each_side=2, on_ends=1)
+
+    prof_options = Professor.objects.all().order_by('professor_name')
+    dept_options = sorted(list({
+        c.split(' ')[0] for c in Course.objects.values_list('course_code', flat=True) if c
+    }))
     credit_options = Course.objects.values_list('course_credits', flat=True).distinct().order_by('course_credits')
+    major_options = Major.objects.values_list('major_name', flat=True).order_by('major_name')
+
     return render(request, 'search.html', {
         'courses': page_obj,
         'page_obj': page_obj,
         'page_range': page_range,
         'paginator': paginator,
-        'query': query,
-        'professors': professors,
-        'departments': departments,
+        'query': query_str,
+        'professors': prof_options,
+        'departments': dept_options,
         'credit_options': credit_options,
-        'selected_department': department,
-        'selected_professor': int(professor_id) if professor_id else '',
-        'selected_credits': credits,
-        'selected_difficulty': difficulty,
+        'majors': major_options,
+        'selected_department': dept_code,
+        'selected_major': selected_major,
+        'selected_professor': int(prof_filter) if prof_filter.isdigit() else '',
+        'selected_credits': credit_filter,
+        'selected_difficulty': diff_filter,
     })
 def course_detail(request, course_id):
     """Render details, aggregate review scores, and reviews for one course."""
@@ -316,78 +348,66 @@ def login_view(request):
 
 
 def register_view(request):
-    """Create a new user account and sign the user in after registration."""
+    """Handles new user creation with a major selection."""
+    available_majors = Major.objects.all().order_by('major_name')
+
     if request.method == 'POST':
-        username = request.POST['username'].strip()
-        email = request.POST['email'].strip()
-        password = request.POST['password']
-        password_confirm = request.POST['password_confirm']
+        uname = request.POST.get('username', '').strip()
+        user_email = request.POST.get('email', '').strip()
+        pwd = request.POST.get('password', '')
+        pwd_confirm = request.POST.get('password_confirm', '')
+        selected_major_id = request.POST.get('major', '').strip()
 
-        pattern = r"^[A-Za-z0-9._%+-]+@uwm\.edu$"
-        username_pattern = r"^[A-Za-z0-9._-]{3,20}$"
-        password_pattern = r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$"
-
-        # Check that passwords match
-        if password != password_confirm:
+        # Validation rules
+        if pwd != pwd_confirm:
             return render(request, 'Registration/register.html', {
-                'error': 'Passwords do not match.'
-            })
-        # Validate username
-        if not re.match(username_pattern, username):
-            return render(request, "Registration/register.html", {
-                "error": "Username must be 3-20 characters and can only contain letters, numbers, periods, underscores, and hyphens."
+                'error': 'Passwords do not match.',
+                'majors': available_majors
             })
 
-        # Validate password
-        if not re.match(password_pattern, password):
-            return render(request, "Registration/register.html", {
-                "error": "Password must be at least 8 characters and contain at least one uppercase letter, one lowercase letter, one number, and one special character."
-            })
-
-        # Check if username already exists
-        if User.objects.filter(username=username).exists():
+        if User.objects.filter(username=uname).exists():
             return render(request, 'Registration/register.html', {
-                'error': 'Username already exists.'
+                'error': 'Username already taken.',
+                'majors': available_majors
             })
 
-        # Check if email already exists
-        if User.objects.filter(email=email).exists():
-            return render(request, "Registration/register.html", {
-                "error": "Email already exists."
+        if User.objects.filter(email=user_email).exists():
+            return render(request, 'Registration/register.html', {
+                'error': 'An account with that email already exists.',
+                'majors': available_majors
             })
 
-        # Validate UWM email pattern
-        if not re.match(pattern, email):
-            return render(request, "Registration/register.html", {
-                "error": "Must use a valid UWM email address to register."
-            })
+        # Fetch the Major instance based on the submitted ID
+        major_obj = None
+        if selected_major_id:
+            major_obj = Major.objects.filter(pk=selected_major_id).first()
 
-        # Create inactive user safely after all validation checks pass
-        user = User.objects.create_user(
-            username=username,
-            email=email,
-            password=password
+        # Save user record with selected major relationship
+        new_user = User.objects.create_user(
+            username=uname,
+            email=user_email,
+            password=pwd,
+            user_major=major_obj
         )
-        user.is_active = False
-        user.save()
+        new_user.is_active = False
+        new_user.save()
 
-        # Generate verification code and session values
-        code = str(random.randint(100000, 999999))
-        request.session["verification_code"] = code
-        request.session["verification_user_id"] = user.id
+        # Send verification email setup
+        v_code = str(random.randint(100000, 999999))
+        request.session['verification_code'] = v_code
+        request.session['verification_user_id'] = new_user.id
 
         send_mail(
             "Verify your account",
-            f"Your verification code is: {code}",
+            f"Your code is: {v_code}",
             getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@uwm.edu'),
-            [user.email],
+            [new_user.email],
             fail_silently=False,
         )
 
-        return redirect("verify_email")
+        return redirect('verify_email')
 
-    return render(request, 'Registration/register.html')
-
+    return render(request, 'Registration/register.html', {'majors': available_majors})
 def verify_email(request):
     """Verify a user's email using the code sent to them."""
     if request.method == 'POST':
@@ -556,49 +576,65 @@ def course_lookup(request):
 @login_required
 def my_profile(request):
     username_error = None
+    all_majors = Major.objects.all().order_by('major_name')
+
     password_form = PasswordChangeForm(user=request.user)
     for field in password_form.fields.values():
         field.widget.attrs['class'] = 'form-control'
 
     if request.method == 'POST':
-        action = request.POST.get('action')
-        if action == 'change_username':
-            new_username = request.POST.get('username', '').strip()
-            if not new_username:
-                username_error = "Username cannot be blank."
-            elif User.objects.filter(username=new_username).exclude(
-                pk=request.user.pk
-            ).exists():
-                username_error = "That username is already taken."
+        action_type = request.POST.get('action')
+
+        if action_type == 'change_username':
+            new_name = request.POST.get('username', '').strip()
+            if not new_name:
+                username_error = "Username cannot be empty."
+            elif User.objects.filter(username=new_name).exclude(pk=request.user.pk).exists():
+                username_error = "Username is already in use."
             else:
-                request.user.username = new_username
+                request.user.username = new_name
                 request.user.save(update_fields=['username'])
-                messages.success(request, "Your username has been updated.")
+                messages.success(request, "Username updated.")
                 return redirect('my_profile')
-        elif action == 'change_password':
-            password_form = PasswordChangeForm(
-                user=request.user,
-                data=request.POST
-            )
+
+        elif action_type == 'change_major':
+            major_input = request.POST.get('user_major', '').strip()
+            major_options = Major.objects.values_list('major_name', flat=True).order_by('major_name')
+
+            if major_input:
+                if major_input.isdigit():
+                    major_obj = Major.objects.filter(pk=major_input).first()
+                else:
+                    major_obj = Major.objects.filter(major_name__iexact=major_input).first()
+
+                if major_obj:
+                    request.user.user_major = major_obj
+                    request.user.save(update_fields=['user_major'])
+                    messages.success(request, "Your major has been updated successfully.")
+                else:
+                    messages.error(request, "Selected major could not be found.")
+            return redirect('my_profile')
+
+        elif action_type == 'change_password':
+            password_form = PasswordChangeForm(user=request.user, data=request.POST)
             for field in password_form.fields.values():
                 field.widget.attrs['class'] = 'form-control'
             if password_form.is_valid():
-                user = password_form.save()
-                update_session_auth_hash(request, user)
-                messages.success(request, "Your password has been changed.")
+                updated_user = password_form.save()
+                update_session_auth_hash(request, updated_user)
+                messages.success(request, "Password updated successfully.")
                 return redirect('my_profile')
 
-    reviews = Review.objects.filter(
+    user_reviews = Review.objects.filter(
         review_user=request.user
     ).select_related('review_course', 'review_professor').order_by('-review_date', '-id')
 
     return render(request, 'my_profile.html', {
-        'reviews': reviews,
+        'reviews': user_reviews,
+        'majors': all_majors,
         'username_error': username_error,
         'password_form': password_form,
     })
-
-
 @login_required
 @require_http_methods(["GET", "POST"])
 def edit_review(request, review_id):

@@ -8,6 +8,11 @@ class UserAdmin(admin.ModelAdmin):
     search_fields = ('username', 'email')
     list_filter = ('user_major', 'is_staff', 'is_active')
 
+@admin.register(Major)
+class MajorAdmin(admin.ModelAdmin):
+    list_display = ('id', 'major_name')
+    search_fields = ('major_name',)
+
 @admin.register(Course)
 class CourseAdmin(admin.ModelAdmin):
     list_display = (

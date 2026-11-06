@@ -31,7 +31,7 @@ class Course(models.Model):
 
     # The course code/identifier (Ex. COMP SCI 351)
     course_code = models.CharField(max_length=100, unique=True)
-
+    major = models.CharField(max_length=100, blank=True, null=True)
     # The number of credits the course is worth
     course_credits = models.IntegerField()
 

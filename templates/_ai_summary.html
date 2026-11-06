@@ -1,0 +1,54 @@
+{% comment %}
+  "Students say..." box on course_detail.html. Hidden until a summary exists
+  (generate with `python manage.py generate_review_summaries`).
+  Never use |safe on this output -- it comes from user-written reviews.
+{% endcomment %}
+{% if summary %}
+<section class="card ai-summary mb-4" aria-labelledby="ai-summary-heading">
+    <div class="card-body p-3">
+        <h2 id="ai-summary-heading" class="h6 mb-2">
+            <i class="bi bi-stars" aria-hidden="true"></i> Students say
+        </h2>
+        <p class="small mb-2">{{ summary.summary }}</p>
+
+        {% if summary.pros or summary.cons %}
+        <div class="row g-2 small mb-2">
+            {% if summary.pros %}
+            <div class="col-sm-6">
+                <span class="fw-semibold">Liked</span>
+                <ul class="mb-0 ps-3">{% for p in summary.pros %}<li>{{ p }}</li>{% endfor %}</ul>
+            </div>
+            {% endif %}
+            {% if summary.cons %}
+            <div class="col-sm-6">
+                <span class="fw-semibold">Disliked</span>
+                <ul class="mb-0 ps-3">{% for c in summary.cons %}<li>{{ c }}</li>{% endfor %}</ul>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {% if summary.themes %}
+        <ul class="ai-summary-tags list-unstyled d-flex flex-wrap gap-2 border-top pt-2 mb-2">
+            {% for t in summary.themes %}
+            <li class="ai-tag ai-tag-{{ t.sentiment }}">
+                {% if t.sentiment == "positive" %}
+                    <i class="bi bi-arrow-up" aria-hidden="true"></i><span class="visually-hidden">Positive:</span>
+                {% elif t.sentiment == "negative" %}
+                    <i class="bi bi-arrow-down" aria-hidden="true"></i><span class="visually-hidden">Negative:</span>
+                {% else %}
+                    <i class="bi bi-arrow-down-up" aria-hidden="true"></i><span class="visually-hidden">Mixed:</span>
+                {% endif %}
+                {{ t.label }} <span class="ai-tag-count">{{ t.mention_count }}</span>
+            </li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+
+        <p class="text-muted mb-0 ai-summary-note">
+            AI-generated from {{ summary.review_count }} review{{ summary.review_count|pluralize }}
+            &middot; updated {{ summary.generated_at|date:"M j, Y" }}
+        </p>
+    </div>
+</section>
+{% endif %}

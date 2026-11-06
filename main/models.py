@@ -147,3 +147,22 @@ class SimilarCourse(models.Model):
 
     def __str__(self):
         return f"{self.course.course_code} -> {self.similar_course.course_code} ({self.score:.2f})"
+
+
+
+class CourseAISummary(models.Model):
+    course = models.OneToOneField(Course, on_delete=models.CASCADE,
+                                  related_name="ai_summary")
+    summary = models.TextField()
+    pros = models.JSONField(default=list)
+    cons = models.JSONField(default=list)
+    themes = models.JSONField(default=list)
+    review_count = models.PositiveIntegerField()
+    source_fingerprint = models.CharField(max_length=64)
+    model_name = models.CharField(max_length=64)
+    input_tokens = models.PositiveIntegerField(default=0)
+    output_tokens = models.PositiveIntegerField(default=0)
+    generated_at = models.DateTimeField()
+
+    def __str__(self):
+        return f"AI summary for {self.course.course_code}"

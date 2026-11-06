@@ -131,3 +131,14 @@ else:
 
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER or "noreply@uwm.edu"
 LOGIN_URL = 'login'
+
+# ---------- Gemini / AI review summaries ----------
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.1-flash-lite")  # cheapest stable model i could find
+GEMINI_TIMEOUT_MS = 30_000
+
+AI_SUMMARY_MIN_REVIEWS = 3
+AI_SUMMARY_MAX_REVIEWS = 40
+AI_SUMMARY_MAX_CHARS_PER_REVIEW = 1500
+AI_SUMMARY_DELAY_SECONDS = 4.0 # spacing between calls in the batch command (free-tier RPM)
+

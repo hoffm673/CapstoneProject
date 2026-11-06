@@ -59,3 +59,36 @@ body {
     border-color: var(--uwm-gold);
     box-shadow: 0 0 0 0.2rem rgba(255, 189, 0, 0.25);
 }
+
+/* AI review summary ("Students say") */
+.ai-summary {
+    border-left: 4px solid var(--uwm-gold);
+}
+
+.ai-summary-note {
+    font-size: 0.75rem;
+}
+
+.ai-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.15rem 0.6rem;
+    border: 1px solid #CCCCCC;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    background-color: #FFFFFF;
+}
+
+.ai-tag-count {
+    color: #6C757D;
+}
+
+.ai-tag-positive { border-color: #9CCFA6; background-color: #EAF6EC; }
+.ai-tag-positive .bi { color: #1E7B34; }
+
+.ai-tag-negative { border-color: #E0A3A3; background-color: #FBECEC; }
+.ai-tag-negative .bi { color: #B02A37; }
+
+.ai-tag-mixed { border-color: #D6C98F; background-color: #F7F3E3; }
+.ai-tag-mixed .bi { color: #8A6D00; }

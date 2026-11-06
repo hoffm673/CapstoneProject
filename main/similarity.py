@@ -47,7 +47,7 @@ DEFAULT_SETTINGS = {
     "min_df": 2,
     # Ignore words that appear in more than this fraction of courses.
     "max_df": 0.5,
-    # Dampens repeated words (log scaling). Usually best left True.
+    # Dampens repeated words (log scaling).
     "sublinear_tf": True,
     # Catalog boilerplate that says nothing about the subject. Added on top of
     # scikit-learn's standard English stop words. Add to this list when you see

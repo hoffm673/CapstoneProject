@@ -6,7 +6,7 @@ from django.db import transaction
 from django.db.models import Avg, Count
 from .models import User
 from .models import Review
-from .models import Course, Professor
+from .models import Course, Professor, ReviewTag
 from django.core.mail import send_mail
 import re
 import random
@@ -22,7 +22,7 @@ from django.db.models import Q
 from django.http import JsonResponse
 from django.template.loader import render_to_string
 from django.db.models import Q, Case, When, Value, IntegerField
-from .models import Course, Professor, SimilarCourse
+from .models import Course, Professor, Comment, ReviewTag, SimilarCourse
 from django.db.models import Exists, OuterRef
 from django.views.decorators.http import require_GET, require_POST, require_http_methods
 from django.db.models import BooleanField
@@ -67,13 +67,20 @@ def review(request):
     """Submit a review, optionally adding a professor missing from the list."""
     courses = Course.objects.all().order_by('course_code')
     professors = Professor.objects.all().order_by('professor_name')
+    tags = ReviewTag.objects.all().order_by('tag_name')
 
     if request.method == 'POST':
         course_id = request.POST.get('course')
         professor_id = request.POST.get('professor', '')
         new_professor_name = ' '.join(request.POST.get('new_professor_name', '').split())
         review_text = request.POST.get('review_text', '').strip()
-        context = {'courses': courses, 'professors': professors}
+        selected_tag_ids = request.POST.getlist('review_tags')
+
+        context = {
+            'courses': courses,
+            'professors': professors,
+            'tags': tags,
+        }
 
         try:
             course = Course.objects.get(pk=course_id)
@@ -123,7 +130,7 @@ def review(request):
                     professor = Professor.objects.create(professor_name=new_professor_name)
                 course.course_professors.add(professor)
 
-            Review.objects.create(
+            new_review = Review.objects.create(
                 review_user=request.user,
                 review_course=course,
                 review_professor=professor,
@@ -132,11 +139,16 @@ def review(request):
                 review_text=review_text
             )
 
+            # Save the tags selected by the user
+            selected_tags = ReviewTag.objects.filter(pk__in=selected_tag_ids)
+            new_review.review_tags.set(selected_tags)
+
         return redirect('search')
 
     return render(request, 'review.html', {
         'courses': courses,
         'professors': professors,
+        'tags': tags,
     })
 
 def logout_view(request):

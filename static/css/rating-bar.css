@@ -1,0 +1,45 @@
+/* Base container */
+.rating-bar {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* Interactive segments (forms) */
+.rating-segment {
+    width: 56px;
+    height: 38px;
+    padding: 0;
+    border: none;
+    background-color: #ececec;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.rating-segment:first-child {
+    border-top-left-radius: 999px;
+    border-bottom-left-radius: 999px;
+}
+
+.rating-segment:last-child {
+    border-top-right-radius: 999px;
+    border-bottom-right-radius: 999px;
+}
+
+/* Read-only compact segments (feed, profile, course detail) */
+.rating-bar-sm {
+    gap: 3px;
+}
+
+.rating-bar-sm .rating-segment {
+    width: 24px;
+    height: 12px;
+    cursor: default;
+}
+
+/* 1–5 fill colors */
+.rating-segment.color-1 { background-color: #f4a4a4; }
+.rating-segment.color-2 { background-color: #f5c396; }
+.rating-segment.color-3 { background-color: #f5e29e; }
+.rating-segment.color-4 { background-color: #c5e3a5; }
+.rating-segment.color-5 { background-color: #93d69b; }

@@ -6,7 +6,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>{% block title %}Course calculator{% endblock %}</title>
+    <title>{% block title %}RateMyUWM{% endblock %}</title>
 
     <!-- Bootstrap CSS -->
     <link
@@ -29,9 +29,8 @@
 
             <!-- Website Name -->
             <a class="navbar-brand fw-bold" href="/">
-                <i class="bi bi-mortarboard-fill me-2"></i>
-                UWM Course Load Calculator
-            </a>
+    <span class="text-white">RateMy</span><span class="text-warning">UWM</span>
+</a>
 
             <!-- Mobile Menu Button -->
             <button
@@ -51,37 +50,28 @@
 
                 <ul class="navbar-nav me-auto ms-xl-4 align-items-xl-center gap-xl-3">
 
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'home' %}">
-                            Home
-                        </a>
-                    </li>
+              <li class="nav-item">
+    <a class="nav-link fs-5" href="{% url 'home' %}" aria-label="Home">
+        <i class="bi bi-house-door"></i>
+    </a>
+</li>
 
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'search' %}">
                             Courses
                         </a>
                     </li>
-                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'review_page' %}">
-                            Reviews
-                        </a>
-                    </li>
 
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'review' %}">
-                            Leave a Review!
+                            Leave a Review
                         </a>
                     </li>
 
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'about' %}">
-                            About
-                        </a>
-                    </li>
+
 
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'calculator' %}">Course Calculator 
+                        <a class="nav-link" href="{% url 'calculator' %}">Generate Load
                         </a>
                     </li>
 
@@ -94,21 +84,24 @@
 
                         <li class="nav-item dropdown">
                             <a
-                                class="nav-link dropdown-toggle"
-                                href="#"
-                                role="button"
-                                data-bs-toggle="dropdown"
-                                aria-expanded="false"
-                            >
-                                <i class="bi bi-person-circle me-1"></i>
-                                {{ user.username }}
-                            </a>
+            id="profileDropdown"
+            class="nav-link d-flex align-items-center p-0"
+            href="#"
+            role="button"
+            data-bs-toggle="dropdown"
+            aria-expanded="false"
+        >
+            <i class="bi bi-person-circle fs-4"></i> </i>
+
+        </a>
 
                             <ul class="dropdown-menu dropdown-menu-end rounded-3 shadow-sm border-0 mt-2"
         aria-labelledby="profileDropdown">
+<div class="d-flex align-items-center px-3 py-2 fw-semibold">
+    &nbsp;<i class="bi bi-person-circle fs-4"></i> </i>&nbsp;{{ user.username }}
+                               </div>
                                 <li>
                                     <a class="dropdown-item" href="{% url 'my_profile' %}">
-                                        <i class="bi bi-person me-2"></i>
                                         My Profile
                                     </a>
                                 </li>

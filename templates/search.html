@@ -12,11 +12,12 @@
         <p class="text-muted mb-0">Search by course code, name, or professor.</p>
     </div>
 
-    <form method="GET" action="{% url 'search' %}" class="mb-4">
+    <form method="GET" action="{% url 'search' %}" id="search-form" class="mb-4 position-relative">
         <div class="input-group input-group-lg shadow-sm rounded-4 overflow-hidden border bg-white">
             <input
                 type="text"
                 name="query"
+                id="search-input"
                 class="form-control border-0 shadow-none px-4"
                 placeholder="Try 'COMP SCI 351' or 'Algorithm' or 'Dr. Joe'..."
                 autocomplete="off"
@@ -31,6 +32,12 @@
                 <i class="bi bi-search me-1"></i> Search
             </button>
         </div>
+
+        <div
+            id="search-dropdown"
+            class="list-group position-absolute w-100 shadow-sm rounded-4 overflow-hidden mt-1 d-none"
+            style="z-index: 1000;"
+        ></div>
     </form>
 
     <div class="row g-4 align-items-start">
@@ -174,5 +181,143 @@
     </div>
 
 </div>
+
+<script>
+    const searchForm = document.getElementById('search-form');
+    const searchInput = document.getElementById('search-input');
+    const searchDropdown = document.getElementById('search-dropdown');
+    let searchTimeout;
+
+    function getRecentSearches() {
+        return JSON.parse(localStorage.getItem('recentSearchQueries')) || [];
+    }
+
+    function saveRecentSearch(term) {
+        const cleaned = term.trim();
+        if (!cleaned) return;
+
+        let recent = getRecentSearches().filter(item => item.toLowerCase() !== cleaned.toLowerCase());
+        recent.unshift(cleaned);
+        localStorage.setItem('recentSearchQueries', JSON.stringify(recent.slice(0, 5)));
+    }
+
+    function showRecentSearches() {
+        const recent = getRecentSearches();
+        searchDropdown.innerHTML = '';
+
+        if (!recent.length) {
+            searchDropdown.classList.add('d-none');
+            return;
+        }
+
+        const header = document.createElement('div');
+        header.className = 'list-group-item d-flex justify-content-between align-items-center bg-light py-2 px-3';
+
+        const label = document.createElement('span');
+        label.className = 'small fw-semibold text-muted';
+        label.textContent = 'Recent searches';
+
+        const clearBtn = document.createElement('button');
+        clearBtn.type = 'button';
+        clearBtn.className = 'btn btn-link btn-sm text-muted text-decoration-none p-0';
+        clearBtn.textContent = 'Clear';
+        clearBtn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            localStorage.removeItem('recentSearchQueries');
+            searchDropdown.classList.add('d-none');
+        });
+
+        header.append(label, clearBtn);
+        searchDropdown.appendChild(header);
+
+        recent.forEach(term => {
+            const item = document.createElement('button');
+            item.type = 'button';
+            item.className = 'list-group-item list-group-item-action px-3 py-2 d-flex align-items-center gap-2';
+
+            const icon = document.createElement('i');
+            icon.className = 'bi bi-clock-history text-muted';
+
+            item.append(icon, document.createTextNode(term));
+            item.addEventListener('click', function () {
+                searchInput.value = term;
+                saveRecentSearch(term);
+                searchForm.submit();
+            });
+
+            searchDropdown.appendChild(item);
+        });
+
+        searchDropdown.classList.remove('d-none');
+    }
+
+    if (searchInput.value.trim()) {
+        saveRecentSearch(searchInput.value);
+    }
+
+    searchForm.addEventListener('submit', function () {
+        saveRecentSearch(searchInput.value);
+    });
+
+    searchInput.addEventListener('focus', function () {
+        if (!this.value.trim()) {
+            showRecentSearches();
+        }
+    });
+
+    searchInput.addEventListener('input', function () {
+        const query = this.value.trim();
+        clearTimeout(searchTimeout);
+
+        if (!query) {
+            showRecentSearches();
+            return;
+        }
+
+        if (query.length < 2) {
+            searchDropdown.classList.add('d-none');
+            return;
+        }
+
+        searchTimeout = setTimeout(function () {
+            fetch(`{% url 'course_lookup' %}?q=${encodeURIComponent(query)}`)
+                .then(response => response.json())
+                .then(data => {
+                    searchDropdown.innerHTML = '';
+
+                    if (!data.results.length) {
+                        searchDropdown.innerHTML = '<div class="list-group-item text-muted py-2 px-3">No courses found.</div>';
+                        searchDropdown.classList.remove('d-none');
+                        return;
+                    }
+
+                    data.results.forEach(course => {
+                        const item = document.createElement('a');
+                        item.href = `/courses/${course.id}/`;
+                        item.className = 'list-group-item list-group-item-action px-3 py-2 d-flex align-items-center gap-2';
+
+                        const icon = document.createElement('i');
+                        icon.className = 'bi bi-search text-muted';
+
+                        item.append(icon, document.createTextNode(course.label));
+                        item.addEventListener('click', function () {
+                            saveRecentSearch(course.label);
+                        });
+
+                        searchDropdown.appendChild(item);
+                    });
+
+                    searchDropdown.classList.remove('d-none');
+                })
+                .catch(error => console.error('Course lookup error:', error));
+        }, 250);
+    });
+
+    document.addEventListener('click', function (event) {
+        if (!searchForm.contains(event.target)) {
+            searchDropdown.classList.add('d-none');
+        }
+    });
+</script>
 
 {% endblock %}

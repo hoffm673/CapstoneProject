@@ -185,14 +185,7 @@
 
                                                     <div class="progress">
 
-                                                        <div class="progress-bar
-                                                            {% if review.difficulty_score <= 2 %}
-                                                                bg-success
-                                                            {% elif review.difficulty_score == 3 %}
-                                                                bg-warning
-                                                            {% else %}
-                                                                bg-danger
-                                                            {% endif %}"
+                                                        <div class="progress-bar rating-scale-{{ review.difficulty_score }}"
 
                                                             style="width: {% widthratio review.difficulty_score 5 100 %}%"
 
@@ -224,14 +217,7 @@
 
                                                     <div class="progress">
 
-                                                        <div class="progress-bar
-                                                            {% if review.time_score <= 2 %}
-                                                                bg-success
-                                                            {% elif review.time_score == 3 %}
-                                                                bg-warning
-                                                            {% else %}
-                                                                bg-danger
-                                                            {% endif %}"
+                                                        <div class="progress-bar rating-scale-{{ review.time_score }}"
 
                                                             style="width: {% widthratio review.time_score 5 100 %}%"
 

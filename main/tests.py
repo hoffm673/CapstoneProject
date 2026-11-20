@@ -38,6 +38,51 @@ class CourseDetailTests(TestCase):
         self.assertContains(response, 'Dr. Test')
         self.assertContains(response, '4.0 / 5')
         self.assertContains(response, 'Useful course with steady work.')
+        self.assertEqual(response.context['rating_distribution'][3], {
+            'score': 4,
+            'difficulty_count': 1,
+            'time_count': 0,
+            'difficulty_height': 80,
+            'time_height': 0,
+        })
+        self.assertContains(response, 'Rating distribution')
+        self.assertContains(response, 'rating-histogram__segment rating-scale-4')
+        self.assertEqual(
+            response.content.count(b'class="rating-histogram__segment rating-scale-'),
+            5
+        )
+        self.assertContains(response, 'progress-bar rating-scale-4')
+        self.assertContains(response, 'progress-bar rating-scale-3')
+
+    def test_course_detail_shows_rating_distribution_empty_state(self):
+        response = self.client.get(reverse('course_detail', args=[self.course.id]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'No ratings to display yet.')
+        self.assertEqual(len(response.context['rating_distribution']), 5)
+        self.assertTrue(all(
+            bucket['difficulty_count'] == bucket['time_count'] == 0
+            for bucket in response.context['rating_distribution']
+        ))
+
+    def test_course_detail_counts_each_rating_for_histogram(self):
+        user = User.objects.create_user(username='student', password='password')
+        for difficulty, time in ((2, 5), (2, 3), (4, 5)):
+            Review.objects.create(
+                review_user=user,
+                review_course=self.course,
+                review_professor=self.professor,
+                difficulty_score=difficulty,
+                time_score=time,
+                review_text='A course review.'
+            )
+
+        response = self.client.get(reverse('course_detail', args=[self.course.id]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['rating_distribution'][1]['difficulty_count'], 2)
+        self.assertEqual(response.context['rating_distribution'][2]['time_count'], 1)
+        self.assertEqual(response.context['rating_distribution'][4]['time_count'], 2)
 
     def test_search_page_links_to_course_detail(self):
         """The course list should link each result to its detail page."""

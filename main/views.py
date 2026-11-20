@@ -163,16 +163,53 @@ def course_detail(request, course_id):
 
     # Aggregate in the database so the page can show summary values without
     # manually iterating over every review in Python.
+    score_counts = {}
+    for score in range(1, 6):
+        score_counts[f'difficulty_{score}_count'] = Count(
+            'id',
+            filter=Q(difficulty_score=score)
+        )
+        score_counts[f'time_{score}_count'] = Count(
+            'id',
+            filter=Q(time_score=score)
+        )
+
     review_stats = reviews.aggregate(
         review_count=Count('id'),
         average_difficulty=Avg('difficulty_score'),
-        average_time=Avg('time_score')
+        average_time=Avg('time_score'),
+        **score_counts
     )
+
+    max_score_count = max(
+        [
+            review_stats[f'{rating_type}_{score}_count']
+            for rating_type in ('difficulty', 'time')
+            for score in range(1, 6)
+        ],
+        default=0
+    )
+    rating_distribution = []
+    for score in range(1, 6):
+        difficulty_count = review_stats[f'difficulty_{score}_count']
+        time_count = review_stats[f'time_{score}_count']
+        rating_distribution.append({
+            'score': score,
+            'difficulty_count': difficulty_count,
+            'time_count': time_count,
+            'difficulty_height': round(
+                difficulty_count / max_score_count * 80
+            ) if max_score_count else 0,
+            'time_height': round(
+                time_count / max_score_count * 80
+            ) if max_score_count else 0,
+        })
 
     return render(request, 'course_detail.html', {
         'course': course,
         'reviews': reviews,
-        'review_stats': review_stats
+        'review_stats': review_stats,
+        'rating_distribution': rating_distribution,
     })
 
 def about(request):

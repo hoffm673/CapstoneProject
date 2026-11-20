@@ -1,9 +1,12 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.forms import PasswordChangeForm
+from django.contrib.auth import update_session_auth_hash
+from django.db import transaction
 from django.db.models import Avg, Count
 from .models import User
 from .models import Review
-from .models import Course, Professor
+from .models import Course, Professor, ReviewTag, Major
 from django.core.mail import send_mail
 import re
 import random
@@ -17,96 +20,105 @@ from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db.models import Q
 from django.http import JsonResponse
-from django.views.decorators.http import require_POST
 from django.template.loader import render_to_string
 from django.db.models import Q, Case, When, Value, IntegerField
+from .models import Course, Professor, Comment, ReviewTag, SimilarCourse, CourseAISummary
+from django.db.models import Exists, OuterRef
+from django.views.decorators.http import require_GET, require_POST, require_http_methods
+from django.db.models import BooleanField
 
 
 
-def home(request):
-    """Render the home page with the two most recent course reviews."""
-    # Pull related records in the same query so the template does not issue
-    # extra database queries for each review card.
-    recent_reviews = Review.objects.select_related(
-        'review_course', 
-        'review_professor', 
-        'review_user__user_major'
-    ).order_by('-review_date', '-id')[:2]
-
-    return render(request, 'home.html', {
-        'recent_reviews': recent_reviews
-    })
 
 @login_required
 def review(request):
-    """Render the review submission form with selectable courses and professors."""
+    """Submit a review, optionally adding a professor missing from the list."""
     courses = Course.objects.all().order_by('course_code')
     professors = Professor.objects.all().order_by('professor_name')
+    tags = ReviewTag.objects.all().order_by('tag_name')
 
-    # Takes the inputs from the review form (POST) and adds them in the database
     if request.method == 'POST':
         course_id = request.POST.get('course')
-        professor_id = request.POST.get('professor')
-        difficulty_score = request.POST.get('difficulty_score')
-        time_score = request.POST.get('time_score')
+        professor_id = request.POST.get('professor', '')
+        new_professor_name = ' '.join(request.POST.get('new_professor_name', '').split())
         review_text = request.POST.get('review_text', '').strip()
+        selected_tag_ids = request.POST.getlist('review_tags')
+
+        context = {
+            'courses': courses,
+            'professors': professors,
+            'tags': tags,
+        }
 
         try:
             course = Course.objects.get(pk=course_id)
-            professor = Professor.objects.get(pk=professor_id)
-        except (Course.DoesNotExist, Professor.DoesNotExist, TypeError, ValueError):
-            return render(request, 'review.html', {
-                'courses': courses,
-                'professors': professors,
-                'error': 'Select a valid course and professor.',
-            })
-
-        if not course.course_professors.filter(pk=professor.pk).exists():
-            return render(request, 'review.html', {
-                'courses': courses,
-                'professors': professors,
-                'error': 'Select a professor who teaches the selected course.',
-            })
+        except (Course.DoesNotExist, TypeError, ValueError):
+            context['error'] = 'Select a valid course.'
+            return render(request, 'review.html', context)
 
         try:
-            difficulty_score = int(difficulty_score)
-            time_score = int(time_score)
+            difficulty_score = int(request.POST.get('difficulty_score'))
+            time_score = int(request.POST.get('time_score'))
         except (TypeError, ValueError):
             difficulty_score = time_score = None
 
-        if (
-            difficulty_score not in range(1, 6)
-            or time_score not in range(1, 6)
-        ):
-            return render(request, 'review.html', {
-                'courses': courses,
-                'professors': professors,
-                'error': 'Both ratings must be whole numbers from 1 to 5.',
-            })
+        if difficulty_score not in range(1, 6) or time_score not in range(1, 6):
+            context['error'] = 'Both ratings must be whole numbers from 1 to 5.'
+            return render(request, 'review.html', context)
 
         if not review_text:
-            return render(request, 'review.html', {
-                'courses': courses,
-                'professors': professors,
-                'error': 'Review text cannot be blank.',
-            })
+            context['error'] = 'Review text cannot be blank.'
+            return render(request, 'review.html', context)
 
-        # Creates a new Review object using the data collected from the form (POST)
-        Review.objects.create(
-            review_user=request.user,
-            review_course=course,
-            review_professor=professor,
-            difficulty_score=difficulty_score,
-            time_score=time_score,
-            review_text=review_text
-        )
+        if professor_id == '__new__':
+            if not new_professor_name:
+                context['error'] = "Enter the professor's name."
+                return render(request, 'review.html', context)
+            if len(new_professor_name) > 100:
+                context['error'] = 'Professor names must be 100 characters or fewer.'
+                return render(request, 'review.html', context)
+        else:
+            try:
+                professor = Professor.objects.get(pk=professor_id)
+            except (Professor.DoesNotExist, TypeError, ValueError):
+                context['error'] = 'Select a valid professor or choose the add-new option.'
+                return render(request, 'review.html', context)
 
-        # Redirects the user to the 'search' page after submitting review
+            if not course.course_professors.filter(pk=professor.pk).exists():
+                context['error'] = 'Select a professor who teaches the selected course.'
+                return render(request, 'review.html', context)
+
+        # Save the professor/course relationship and review in one transaction.
+        with transaction.atomic():
+            if professor_id == '__new__':
+                professor = Professor.objects.filter(
+                    professor_name__iexact=new_professor_name
+                ).first()
+                if professor is None:
+                    professor = Professor.objects.create(professor_name=new_professor_name)
+                course.course_professors.add(professor)
+
+            new_review = Review.objects.create(
+                review_user=request.user,
+                review_course=course,
+                review_professor=professor,
+                difficulty_score=difficulty_score,
+                time_score=time_score,
+                review_text=review_text
+            )
+
+            # Save the tags selected by the user
+            selected_tags = ReviewTag.objects.filter(pk__in=selected_tag_ids)
+            new_review.review_tags.set(selected_tags)
+
+
+        messages.success(request, 'Review submitted!')
         return redirect('search')
 
     return render(request, 'review.html', {
         'courses': courses,
         'professors': professors,
+        'tags': tags,
     })
 
 def logout_view(request):
@@ -119,32 +131,101 @@ def logout_view(request):
 COURSES_PER_PAGE = 20
 
 def search(request):
-    """Render a paginated course list, optionally filtered by a search query."""
-    query = request.GET.get('query', '').strip()
+    """Render a paginated course list, filtered by query/major and prioritized."""
+    query_str = request.GET.get('query', '').strip()
+    dept_code = request.GET.get('department', '').strip()
+    prof_filter = request.GET.get('professor', '').strip()
+    credit_filter = request.GET.get('credits', '').strip()
+    diff_filter = request.GET.get('difficulty', '').strip()
+    selected_major = request.GET.get('major', '').strip()
 
-    courses = Course.objects.prefetch_related('course_professors').order_by('course_code')
-    if query:
+    courses = Course.objects.prefetch_related('course_professors').annotate(
+        avg_difficulty=Avg('review__difficulty_score')
+    )
+
+    if query_str:
         courses = courses.filter(
-            Q(course_code__icontains=query) |
-            Q(course_name__icontains=query) |
-            Q(course_professors__professor_name__icontains=query)
+            Q(course_code__icontains=query_str) |
+            Q(course_name__icontains=query_str) |
+            Q(course_professors__professor_name__icontains=query_str)
         ).distinct()
 
-    paginator = Paginator(courses, COURSES_PER_PAGE)
-    # get_page handles bad/out-of-range page numbers gracefully
-    page_obj = paginator.get_page(request.GET.get('page'))
+    if selected_major:
+        courses = courses.filter(major__iexact=selected_major)
 
-    # Shows something like: 1 ... 4 5 [6] 7 8 ... 20
-    page_range = paginator.get_elided_page_range(
-        page_obj.number, on_each_side=2, on_ends=1
-    )
+    if dept_code:
+        courses = courses.filter(course_code__icontains=dept_code)
+
+    if prof_filter:
+        courses = courses.filter(course_professors__id=prof_filter)
+
+    if credit_filter:
+        courses = courses.filter(course_credits=credit_filter)
+
+    if diff_filter:
+        try:
+            d_val = float(diff_filter)
+            courses = courses.filter(
+                avg_difficulty__gte=d_val,
+                avg_difficulty__lt=d_val + 1.0
+            )
+        except ValueError:
+            pass
+
+    courses = courses.distinct()
+
+    # Determine priority major cleanly without type mismatch exceptions
+    target_major_name = None
+    if request.user.is_authenticated and request.user.user_major:
+        target_major_name = request.user.user_major.major_name
+    else:
+        top_major_query = (
+            User.objects.filter(user_major__isnull=False)
+            .values('user_major__major_name')
+            .annotate(cnt=Count('id'))
+            .order_by('-cnt')
+            .first()
+        )
+        if top_major_query:
+            target_major_name = top_major_query.get('user_major__major_name')
+
+    if target_major_name:
+        courses = courses.annotate(
+            is_priority=Case(
+                When(major__iexact=target_major_name, then=Value(0)),
+                default=Value(1),
+                output_field=IntegerField()
+            )
+        ).order_by('is_priority', 'course_code')
+    else:
+        courses = courses.order_by('course_code')
+
+    paginator = Paginator(courses, COURSES_PER_PAGE)
+    page_obj = paginator.get_page(request.GET.get('page'))
+    page_range = paginator.get_elided_page_range(page_obj.number, on_each_side=2, on_ends=1)
+
+    prof_options = Professor.objects.all().order_by('professor_name')
+    dept_options = sorted(list({
+        c.split(' ')[0] for c in Course.objects.values_list('course_code', flat=True) if c
+    }))
+    credit_options = Course.objects.values_list('course_credits', flat=True).distinct().order_by('course_credits')
+    major_options = Major.objects.values_list('major_name', flat=True).order_by('major_name')
 
     return render(request, 'search.html', {
         'courses': page_obj,
         'page_obj': page_obj,
         'page_range': page_range,
         'paginator': paginator,
-        'query': query,
+        'query': query_str,
+        'professors': prof_options,
+        'departments': dept_options,
+        'credit_options': credit_options,
+        'majors': major_options,
+        'selected_department': dept_code,
+        'selected_major': selected_major,
+        'selected_professor': int(prof_filter) if prof_filter.isdigit() else '',
+        'selected_credits': credit_filter,
+        'selected_difficulty': diff_filter,
     })
 def course_detail(request, course_id):
     """Render details, aggregate review scores, and reviews for one course."""
@@ -156,62 +237,98 @@ def course_detail(request, course_id):
 
     # Reviews are reused for both the list and summary stats; select_related
     # avoids one extra query per review for professor/user/major data.
-    reviews = Review.objects.filter(review_course=course).select_related(
+    review_qs = Review.objects.filter(review_course=course).select_related(
         'review_professor',
         'review_user__user_major'
     ).order_by('-review_date', '-id')
 
-    # Aggregate in the database so the page can show summary values without
-    # manually iterating over every review in Python.
-    score_counts = {}
-    for score in range(1, 6):
-        score_counts[f'difficulty_{score}_count'] = Count(
-            'id',
-            filter=Q(difficulty_score=score)
-        )
-        score_counts[f'time_{score}_count'] = Count(
-            'id',
-            filter=Q(time_score=score)
-        )
+    time_score_counts = {
+        f'time_{score}': Count('id', filter=Q(time_score=score))
+        for score in range(1, 6)
+    }
 
-    review_stats = reviews.aggregate(
+    # Aggregate in the database so the page can show summary values and the
+    # rating distribution without manually iterating over every review.
+    review_stats = review_qs.aggregate(
         review_count=Count('id'),
         average_difficulty=Avg('difficulty_score'),
         average_time=Avg('time_score'),
-        **score_counts
+        diff_5=Count('id', filter=Q(difficulty_score=5)),
+        diff_4=Count('id', filter=Q(difficulty_score=4)),
+        diff_3=Count('id', filter=Q(difficulty_score=3)),
+        diff_2=Count('id', filter=Q(difficulty_score=2)),
+        diff_1=Count('id', filter=Q(difficulty_score=1)),
+        **time_score_counts,
     )
 
-    max_score_count = max(
+    total = review_stats['review_count'] or 0
+    difficulty_distribution = [
+        {'label': 'Brutal (5)', 'count': review_stats['diff_5'], 'pct': round(review_stats['diff_5'] / total * 100) if total else 0},
+        {'label': 'Hard (4)',   'count': review_stats['diff_4'], 'pct': round(review_stats['diff_4'] / total * 100) if total else 0},
+        {'label': 'Medium (3)', 'count': review_stats['diff_3'], 'pct': round(review_stats['diff_3'] / total * 100) if total else 0},
+        {'label': 'Easy (2)',   'count': review_stats['diff_2'], 'pct': round(review_stats['diff_2'] / total * 100) if total else 0},
+        {'label': 'Chill (1)',  'count': review_stats['diff_1'], 'pct': round(review_stats['diff_1'] / total * 100) if total else 0},
+    ]
+
+    max_rating_count = max(
         [
-            review_stats[f'{rating_type}_{score}_count']
-            for rating_type in ('difficulty', 'time')
+            review_stats[f'diff_{score}']
+            for score in range(1, 6)
+        ] + [
+            review_stats[f'time_{score}']
             for score in range(1, 6)
         ],
         default=0
     )
     rating_distribution = []
     for score in range(1, 6):
-        difficulty_count = review_stats[f'difficulty_{score}_count']
-        time_count = review_stats[f'time_{score}_count']
+        difficulty_count = review_stats[f'diff_{score}']
+        time_count = review_stats[f'time_{score}']
         rating_distribution.append({
             'score': score,
             'difficulty_count': difficulty_count,
             'time_count': time_count,
             'difficulty_height': round(
-                difficulty_count / max_score_count * 80
-            ) if max_score_count else 0,
+                difficulty_count / max_rating_count * 80
+            ) if max_rating_count else 0,
             'time_height': round(
-                time_count / max_score_count * 80
-            ) if max_score_count else 0,
+                time_count / max_rating_count * 80
+            ) if max_rating_count else 0,
         })
+
+    paginator = Paginator(review_qs, 10)
+    reviews = paginator.get_page(request.GET.get('page'))
+
+    # Precomputed by `manage.py build_similar_courses`. Pull each similar
+    # course's review averages in the same query so cards can show them.
+    similar_courses = [
+        link.similar_course
+        for link in SimilarCourse.objects.filter(course=course)
+        .select_related('similar_course')
+        .order_by('rank')[:4]
+    ]
+    similar_stats = {
+        row['id']: row
+        for row in Course.objects.filter(pk__in=[c.pk for c in similar_courses])
+        .values('id')
+        .annotate(
+            review_count=Count('review'),
+            average_difficulty=Avg('review__difficulty_score'),
+            average_time=Avg('review__time_score'),
+        )
+    }
+    for similar in similar_courses:
+        similar.stats = similar_stats.get(similar.pk, {})
 
     return render(request, 'course_detail.html', {
         'course': course,
         'reviews': reviews,
         'review_stats': review_stats,
+        'difficulty_distribution': difficulty_distribution,
         'rating_distribution': rating_distribution,
+        'similar_courses': similar_courses,
+        'ai_summary': CourseAISummary.objects.filter(course=course).first(),
     })
-
 def about(request):
     """Render the static about page."""
     return render(request, "about.html")
@@ -252,78 +369,87 @@ def login_view(request):
 
 
 def register_view(request):
-    """Create a new user account and sign the user in after registration."""
-    if request.method == 'POST':
-        username = request.POST['username'].strip()
-        email = request.POST['email'].strip()
-        password = request.POST['password']
-        password_confirm = request.POST['password_confirm']
+    """Handles new user creation with a major selection."""
+    available_majors = Major.objects.all().order_by('major_name')
 
-        pattern = r"^[A-Za-z0-9._%+-]+@uwm\.edu$"
+    if request.method == 'POST':
+        uname = request.POST.get('username', '').strip()
+        user_email = request.POST.get('email', '').strip()
+        pwd = request.POST.get('password', '')
+        pwd_confirm = request.POST.get('password_confirm', '')
+        selected_major_id = request.POST.get('major', '').strip()
+        email_pattern = r"^[A-Za-z0-9._%+-]+@uwm\.edu$"
         username_pattern = r"^[A-Za-z0-9._-]{3,20}$"
         password_pattern = r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$"
 
-        # Check that passwords match
-        if password != password_confirm:
+        # Validation rules
+        if pwd != pwd_confirm:
             return render(request, 'Registration/register.html', {
-                'error': 'Passwords do not match.'
-            })
-        # Validate username
-        if not re.match(username_pattern, username):
-            return render(request, "Registration/register.html", {
-                "error": "Username must be 3-20 characters and can only contain letters, numbers, periods, underscores, and hyphens."
+                'error': 'Passwords do not match.',
+                'majors': available_majors
             })
 
-        # Validate password
-        if not re.match(password_pattern, password):
-            return render(request, "Registration/register.html", {
-                "error": "Password must be at least 8 characters and contain at least one uppercase letter, one lowercase letter, one number, and one special character."
-            })
-
-        # Check if username already exists
-        if User.objects.filter(username=username).exists():
+        if not re.match(username_pattern, uname):
             return render(request, 'Registration/register.html', {
-                'error': 'Username already exists.'
+                'error': 'Username must be 3-20 characters and can only contain letters, numbers, periods, underscores, and hyphens.',
+                'majors': available_majors
             })
 
-        # Check if email already exists
-        if User.objects.filter(email=email).exists():
-            return render(request, "Registration/register.html", {
-                "error": "Email already exists."
+        if not re.match(password_pattern, pwd):
+            return render(request, 'Registration/register.html', {
+                'error': 'Password must be at least 8 characters and contain at least one uppercase letter, one lowercase letter, one number, and one special character.',
+                'majors': available_majors
             })
 
-        # Validate UWM email pattern
-        if not re.match(pattern, email):
-            return render(request, "Registration/register.html", {
-                "error": "Must use a valid UWM email address to register."
+        if User.objects.filter(username=uname).exists():
+            return render(request, 'Registration/register.html', {
+                'error': 'Username already taken.',
+                'majors': available_majors
             })
 
-        # Create inactive user safely after all validation checks pass
-        user = User.objects.create_user(
-            username=username,
-            email=email,
-            password=password
+        if not re.match(email_pattern, user_email):
+            return render(request, 'Registration/register.html', {
+                'error': 'Must use a valid UWM email address to register.',
+                'majors': available_majors
+            })
+
+        if User.objects.filter(email=user_email).exists():
+            return render(request, 'Registration/register.html', {
+                'error': 'An account with that email already exists.',
+                'majors': available_majors
+            })
+
+        # Fetch the Major instance based on the submitted ID
+        major_obj = None
+        if selected_major_id:
+            major_obj = Major.objects.filter(pk=selected_major_id).first()
+
+        # Save user record with selected major relationship
+        new_user = User.objects.create_user(
+            username=uname,
+            email=user_email,
+            password=pwd,
+            user_major=major_obj
         )
-        user.is_active = False
-        user.save()
+        new_user.is_active = False
+        new_user.save()
 
-        # Generate verification code and session values
-        code = str(random.randint(100000, 999999))
-        request.session["verification_code"] = code
-        request.session["verification_user_id"] = user.id
+        # Send verification email setup
+        v_code = str(random.randint(100000, 999999))
+        request.session['verification_code'] = v_code
+        request.session['verification_user_id'] = new_user.id
 
         send_mail(
             "Verify your account",
-            f"Your verification code is: {code}",
+            f"Your verification code is: {v_code}",
             getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@uwm.edu'),
-            [user.email],
+            [new_user.email],
             fail_silently=False,
         )
 
-        return redirect("verify_email")
+        return redirect('verify_email')
 
-    return render(request, 'Registration/register.html')
-
+    return render(request, 'Registration/register.html', {'majors': available_majors})
 def verify_email(request):
     """Verify a user's email using the code sent to them."""
     if request.method == 'POST':
@@ -488,29 +614,122 @@ def course_lookup(request):
         for c in courses[:5]
     ]
     return JsonResponse({'results': results})
-
 @login_required
 def my_profile(request):
-
     username_error = None
+    all_majors = Major.objects.all().order_by('major_name')
 
-    # Method for changing username on the profile page
+    password_form = PasswordChangeForm(user=request.user)
+    for field in password_form.fields.values():
+        field.widget.attrs['class'] = 'form-control'
+
     if request.method == 'POST':
-        new_username = request.POST.get('username')
+        action_type = request.POST.get('action')
 
-        # Check if the username already exists
-        if User.objects.filter(username=new_username).exclude(id=request.user.id).exists():
-            username_error = "That username is already taken."
-        else:
-            request.user.username = new_username
-            request.user.save()
+        if action_type == 'change_username':
+            new_name = request.POST.get('username', '').strip()
+            if not new_name:
+                username_error = "Username cannot be empty."
+            elif User.objects.filter(username=new_name).exclude(pk=request.user.pk).exists():
+                username_error = "Username is already in use."
+            else:
+                request.user.username = new_name
+                request.user.save(update_fields=['username'])
+                messages.success(request, "Username updated.")
+                return redirect('my_profile')
 
-    # grabs all the reviews for the logged in user
-    reviews = Review.objects.filter(review_user=request.user)
+        elif action_type == 'change_major':
+            major_input = request.POST.get('user_major', '').strip()
+            major_options = Major.objects.values_list('major_name', flat=True).order_by('major_name')
+
+            if major_input:
+                if major_input.isdigit():
+                    major_obj = Major.objects.filter(pk=major_input).first()
+                else:
+                    major_obj = Major.objects.filter(major_name__iexact=major_input).first()
+
+                if major_obj:
+                    request.user.user_major = major_obj
+                    request.user.save(update_fields=['user_major'])
+                    messages.success(request, "Your major has been updated successfully.")
+                else:
+                    messages.error(request, "Selected major could not be found.")
+            return redirect('my_profile')
+
+        elif action_type == 'change_password':
+            password_form = PasswordChangeForm(user=request.user, data=request.POST)
+            for field in password_form.fields.values():
+                field.widget.attrs['class'] = 'form-control'
+            if password_form.is_valid():
+                updated_user = password_form.save()
+                update_session_auth_hash(request, updated_user)
+                messages.success(request, "Password updated successfully.")
+                return redirect('my_profile')
+
+    user_reviews = Review.objects.filter(
+        review_user=request.user
+    ).select_related('review_course', 'review_professor').order_by('-review_date', '-id')
+
+    paginator = Paginator(user_reviews, 5)
+    reviews = paginator.get_page(request.GET.get('page'))
 
     return render(request, 'my_profile.html', {
         'reviews': reviews,
-        'username_error': username_error
+        'majors': all_majors,
+        'username_error': username_error,
+        'password_form': password_form,
+    })
+@login_required
+@require_http_methods(["GET", "POST"])
+def edit_review(request, review_id):
+    review = get_object_or_404(Review, pk=review_id, review_user=request.user)
+    error = None
+    difficulty_value = review.difficulty_score
+    time_value = review.time_score
+    review_text_value = review.review_text
+
+    if request.method == 'POST':
+        difficulty_value = request.POST.get('difficulty_score', '')
+        time_value = request.POST.get('time_score', '')
+        review_text_value = request.POST.get('review_text', '')
+        try:
+            difficulty_score = int(difficulty_value)
+            time_score = int(time_value)
+        except (TypeError, ValueError):
+            difficulty_score = time_score = None
+
+        review_text = review_text_value.strip()
+        if (
+            difficulty_score not in range(1, 6)
+            or time_score not in range(1, 6)
+        ):
+            error = 'Both ratings must be whole numbers from 1 to 5.'
+        elif not review_text:
+            error = 'Review text cannot be blank.'
+        else:
+            review.difficulty_score = difficulty_score
+            review.time_score = time_score
+            review.review_text = review_text
+            review.save(update_fields=[
+                'difficulty_score',
+                'time_score',
+                'review_text',
+            ])
+            messages.success(request, "Your review has been updated.")
+            return redirect('my_profile')
+
+    return render(request, 'edit_review.html', {
+        'review': review,
+        'error': error,
+        'difficulty_options': [
+            (score, str(score) == str(difficulty_value))
+            for score in range(1, 6)
+        ],
+        'time_options': [
+            (score, str(score) == str(time_value))
+            for score in range(1, 6)
+        ],
+        'review_text_value': review_text_value,
     })
 
 
@@ -519,4 +738,204 @@ def my_profile(request):
 def delete_review(request, review_id):
     review = get_object_or_404(Review, pk=review_id, review_user=request.user)
     review.delete()
+    messages.success(request, "Your review has been deleted.")
     return redirect('my_profile')
+
+"""review page showing all reviews"""
+def home(request):
+    query = request.GET.get('q', '').strip()
+    sort_by = request.GET.get('sort', 'recent')
+
+    # Base queryset prefetching related models for efficiency
+    reviews = Review.objects.select_related(
+        'review_course',
+        'review_professor',
+        'review_user__user_major'
+    ).annotate(
+        # distinct=True stops the two joins from multiplying each other's counts
+        upvote_count=Count('review_upvotes', distinct=True),
+        comment_count=Count('comments', distinct=True),
+    )
+
+    # Whether the current user has upvoted each review (drives the filled heart)
+    if request.user.is_authenticated:
+        reviews = reviews.annotate(
+            user_upvoted=Exists(
+                Review.review_upvotes.through.objects.filter(
+                    review_id=OuterRef('pk'),
+                    user_id=request.user.pk,
+                )
+            )
+        )
+    else:
+        reviews = reviews.annotate(
+            user_upvoted=Value(False, output_field=BooleanField())
+        )
+
+    # 1. Search across review text, course code/name, professor name, and author username
+    if query:
+        reviews = reviews.filter(
+            Q(review_text__icontains=query) |
+            Q(review_course__course_code__icontains=query) |
+            Q(review_course__course_name__icontains=query) |
+            Q(review_professor__professor_name__icontains=query) |
+            Q(review_user__username__icontains=query)
+        )
+
+    # 2. Sorting options
+    if sort_by == 'oldest':
+        reviews = reviews.order_by('review_date', 'id')
+    elif sort_by == 'easiest':
+        reviews = reviews.order_by('difficulty_score', '-review_date')
+    elif sort_by == 'hardest':
+        reviews = reviews.order_by('-difficulty_score', '-review_date')
+    elif sort_by == 'popular':
+        reviews = reviews.annotate(
+            course_review_count=Count('review_course__review')
+        ).order_by('-course_review_count', '-review_date', '-id')
+    else:  # Default to most recent
+        reviews = reviews.order_by('-review_date', '-id')
+
+
+    # Paginate feed (e.g., 10 reviews per page)
+    paginator = Paginator(reviews, 10)
+    page_obj = paginator.get_page(request.GET.get('page'))
+
+    return render(request, 'home.html', {
+        'reviews': page_obj,
+        'query': query,
+        'sort_by': sort_by,
+    })
+
+# Comment and upvotes on reviews
+# How many comments to load each time "Show more" is clicked
+COMMENTS_PER_LOAD = 3
+COMMENT_MAX_LENGTH = 1000
+
+
+def _login_required_json():
+    return JsonResponse(
+        {'error': 'You must be logged in to do that.', 'login_url': reverse('login')},
+        status=401
+    )
+
+
+def _comment_to_dict(comment):
+    return {
+        'id': comment.id,
+        'user': comment.comment_user.username,
+        'text': comment.comment_text,
+        'date': comment.comment_date.strftime('%b %d, %Y'),
+    }
+
+
+@require_GET
+def review_comments(request, review_id):
+    """Return the next batch of comments for a review, oldest first.
+
+    Uses ?offset=N to say how many comments the page already has.
+    One extra comment is fetched to know whether a "Show more" button
+    is needed, without running a separate COUNT query.
+    """
+    review = get_object_or_404(Review, pk=review_id)
+
+    try:
+        offset = max(int(request.GET.get('offset', 0)), 0)
+    except ValueError:
+        offset = 0
+
+    batch = list(
+        review.comments.select_related('comment_user')
+        .order_by('comment_date', 'id')[offset:offset + COMMENTS_PER_LOAD + 1]
+    )
+
+    return JsonResponse({
+        'comments': [_comment_to_dict(c) for c in batch[:COMMENTS_PER_LOAD]],
+        'has_more': len(batch) > COMMENTS_PER_LOAD,
+    })
+
+
+@require_POST
+def add_comment(request, review_id):
+    """Post a new comment under a review."""
+    if not request.user.is_authenticated:
+        return _login_required_json()
+
+    review = get_object_or_404(Review, pk=review_id)
+    text = request.POST.get('comment_text', '').strip()
+
+    if not text:
+        return JsonResponse({'error': 'Comment cannot be blank.'}, status=400)
+    if len(text) > COMMENT_MAX_LENGTH:
+        return JsonResponse(
+            {'error': f'Comments can be at most {COMMENT_MAX_LENGTH} characters.'},
+            status=400
+        )
+
+    comment = Comment.objects.create(
+        comment_review=review,
+        comment_user=request.user,
+        comment_text=text
+    )
+
+    return JsonResponse({
+        'comment': _comment_to_dict(comment),
+        'comment_count': review.comments.count(),
+    }, status=201)
+
+
+@require_POST
+def toggle_upvote(request, review_id):
+    """Upvote a review, or remove the upvote if the user already upvoted it."""
+    if not request.user.is_authenticated:
+        return _login_required_json()
+
+    review = get_object_or_404(Review, pk=review_id)
+
+    if review.review_upvotes.filter(pk=request.user.pk).exists():
+        review.review_upvotes.remove(request.user)
+        upvoted = False
+    else:
+        review.review_upvotes.add(request.user)
+        upvoted = True
+
+    return JsonResponse({
+        'upvoted': upvoted,
+        'upvote_count': review.review_upvotes.count(),
+    })
+
+
+def calculator(request):
+    #Course take average difficulty, average time, and number of reviews
+    courses = Course.objects.annotate(
+        avg_difficulty=Avg('review__difficulty_score'),
+        avg_time=Avg('review__time_score'),
+        review_count=Count('review')
+    ).order_by('course_code')
+
+    # Handle saving schedule to a user who is logged in
+    if request.method == 'POST':
+        if not request.user.is_authenticated:
+            messages.error(request, "You must be logged in to save your schedule.")
+            return redirect('login')
+
+        selected_course_ids = request.POST.getlist('selected_courses')
+        request.user.saved_courses.set(selected_course_ids)
+        messages.success(request, "Your course schedule has been saved to your account!")
+        return redirect('calculator')
+
+    # If logged in, get their previously saved courses
+    saved_course_ids = []
+    if request.user.is_authenticated:
+        saved_course_ids = list(request.user.saved_courses.values_list('id', flat=True))
+
+    return render(request, 'calculator.html', {
+        'courses': courses,
+        'saved_course_ids': saved_course_ids,
+    })
+
+def privacy_policy(request):
+    return render(request, 'privacy_policy.html')
+
+def faq(request):
+    return render(request, 'faq.html')

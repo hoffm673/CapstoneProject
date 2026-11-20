@@ -1,3 +1,4 @@
+
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.contrib.auth.models import AbstractUser
@@ -30,7 +31,7 @@ class Course(models.Model):
 
     # The course code/identifier (Ex. COMP SCI 351)
     course_code = models.CharField(max_length=100, unique=True)
-
+    major = models.CharField(max_length=100, blank=True, null=True)
     # The number of credits the course is worth
     course_credits = models.IntegerField()
 
@@ -43,8 +44,25 @@ class Course(models.Model):
         return self.course_code + " - " + self.course_name
 
 
+# Review Tag model
+class ReviewTag(models.Model):
+    # A tag that students can attach to their reviews
+    tag_name = models.CharField(max_length=50, unique=True)
+
+    def __str__(self):
+        return self.tag_name
+
+
 # Review model
 class Review(models.Model):
+
+    # Tags selected by the student when submitting their review
+    review_tags = models.ManyToManyField(
+        ReviewTag,
+        blank=True,
+        related_name='reviews'
+    )
+
     # Who the review is posted by
     # This is used to also see the reviewer's major
     review_user = models.ForeignKey("User",on_delete=models.CASCADE)
@@ -77,6 +95,38 @@ class Review(models.Model):
     # The date the review was posted
     review_date = models.DateField(auto_now_add=True)
 
+    # Users who upvoted this review
+    review_upvotes = models.ManyToManyField(
+        "User",
+        blank=True,
+        related_name="upvoted_reviews"
+    )
+
+
+# Comment model
+class Comment(models.Model):
+    # The review this comment belongs to
+    comment_review = models.ForeignKey(
+        Review,
+        on_delete=models.CASCADE,
+        related_name="comments"
+    )
+
+    # The user who wrote the comment
+    comment_user = models.ForeignKey(
+        "User",
+        on_delete=models.CASCADE
+    )
+
+    # The comment text
+    comment_text = models.CharField(max_length=1000)
+
+    # The date and time the comment was posted
+    comment_date = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.comment_user.username}: {self.comment_text[:50]}"
+
 
 # User
 # Imported AbstractUser from Django, it'll handle ID, username, password, & email
@@ -92,5 +142,48 @@ class User(AbstractUser):
         blank=True
     )
 
+    saved_courses = models.ManyToManyField(Course, blank=True, related_name='saved_by_users')
+
     def __str__(self):
         return self.username
+
+
+# Similar course link, filled in by `python manage.py build_similar_courses`
+# (see main/similarity.py). One row = "similar_course is the Nth best match for course".
+class SimilarCourse(models.Model):
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name="similar_links")
+    similar_course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name="+")
+
+    # Cosine similarity from 0 (nothing in common) to 1 (identical text)
+    score = models.FloatField()
+
+    # 1 = best match
+    rank = models.PositiveSmallIntegerField()
+
+    class Meta:
+        ordering = ["course", "rank"]
+        constraints = [
+            models.UniqueConstraint(fields=["course", "similar_course"], name="unique_similar_course"),
+        ]
+
+    def __str__(self):
+        return f"{self.course.course_code} -> {self.similar_course.course_code} ({self.score:.2f})"
+
+
+
+class CourseAISummary(models.Model):
+    course = models.OneToOneField(Course, on_delete=models.CASCADE,
+                                  related_name="ai_summary")
+    summary = models.TextField()
+    pros = models.JSONField(default=list)
+    cons = models.JSONField(default=list)
+    themes = models.JSONField(default=list)
+    review_count = models.PositiveIntegerField()
+    source_fingerprint = models.CharField(max_length=64)
+    model_name = models.CharField(max_length=64)
+    input_tokens = models.PositiveIntegerField(default=0)
+    output_tokens = models.PositiveIntegerField(default=0)
+    generated_at = models.DateTimeField()
+
+    def __str__(self):
+        return f"AI summary for {self.course.course_code}"

@@ -93,7 +93,15 @@
                     required
                 >
             </div>
-
+<div class="form-group mb-3">
+    <label for="major">Select Major</label>
+    <select name="major" id="major" class="form-control" required>
+        <option value="" disabled selected>-- Choose your major --</option>
+        {% for m in majors %}
+            <option value="{{ m.pk }}">{{ m.major_name }}</option>
+        {% endfor %}
+    </select>
+</div>
             <button type="submit" class="btn btn-primary w-100">
                 Register
             </button>

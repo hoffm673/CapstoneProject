@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+
+{% block title %}Frequently Asked Questions | RateMyUWM{% endblock %}
+
+{% block content %}
+
+<div class="container py-5">
+
+    <!-- PAGE HEADER -->
+    <div class="col-lg mx-auto mb-4">
+        <h1 class="fw-bold mb-2">Frequently Asked Questions</h1>
+        <p class="text-secondary lead">Everything you need to know about course ratings, workload estimation, and community guidelines.</p>
+    </div>
+
+    <div class="row g-5">
+
+        <!-- TABLE OF CONTENTS (STICKY SIDEBAR) -->
+        <aside class="col-lg-3">
+            <div class="sticky-top" style="top: 100px;">
+                <h6 class="fw-bold text-uppercase mb-3">
+                    On This Page
+                </h6>
+
+                <nav class="nav flex-column small">
+                    <a class="nav-link text-secondary px-0" href="#rating-scales">1. Difficulty vs. Time Commitment</a>
+                    <a class="nav-link text-secondary px-0" href="#difficulty-scale">2. Difficulty Scale (1-5)</a>
+                    <a class="nav-link text-secondary px-0" href="#time-scale">3. Time Scale (1-5)</a>
+                    <a class="nav-link text-secondary px-0" href="#course-calculator">4. Course Load Calculator</a>
+                    <a class="nav-link text-secondary px-0" href="#accounts">5. Accounts & Email Verification</a>
+                    <a class="nav-link text-secondary px-0" href="#privacy">6. Anonymity & Privacy</a>
+                    <a class="nav-link text-secondary px-0" href="#affiliation">7. University Affiliation</a>
+                </nav>
+            </div>
+        </aside>
+
+        <!-- FAQ CONTENT -->
+        <main class="col-lg-9">
+
+            <!-- SECTION 1 -->
+            <section id="rating-scales" class="mb-5">
+                <h4 class="fw-bold mb-3">1. What is the difference between Difficulty and Time Commitment?</h4>
+
+                <p>
+                    A class can be <strong>time-consuming</strong> without being intellectually difficult (e.g., weekly discussion posts, lengthy reading packets, or repetitive busywork). Conversely, a course can have <strong>low time commitment</strong> but feature extremely abstract or complex mathematical concepts that require deep cognitive effort.
+                </p>
+
+                <p>
+                    We separate these two metrics so you can distinguish between a course that will take up your entire Saturday afternoon versus one with conceptually demanding exams.
+                </p>
+            </section>
+
+            <hr class="my-5">
+
+            <!-- SECTION 2 -->
+            <section id="difficulty-scale" class="mb-5">
+                <h4 class="fw-bold mb-3">2. How is Difficulty (1–5) Defined?</h4>
+
+                <p>Difficulty reflects how hard the core concepts and evaluations are to comprehend and pass:</p>
+
+                <div class="card border-0 bg-light p-3 mb-3">
+                    <ul class="list-unstyled mb-0">
+                        <li class="mb-3">
+                            <span class="badge bg-success me-2">Score 1</span> <strong>Trivial Concepts:</strong> The material is straightforward, intuitive, and requires minimal cognitive strain. Most students grasp it right away.
+                        </li>
+                        <li class="mb-3">
+                            <span class="badge bg-info text-dark me-2">Score 2</span> <strong>Accessible:</strong> Mostly clear concepts with occasional topics requiring extra attention or review before quizzes.
+                        </li>
+                        <li class="mb-3">
+                            <span class="badge bg-warning text-dark me-2">Score 3</span> <strong>Moderate / Standard:</strong> Introduces new, non-intuitive topics. Requires genuine concentration and studying, but can be reasonably grasped by most students.
+                        </li>
+                        <li class="mb-3">
+                            <span class="badge bg-orange text-white me-2" style="background-color: #fd7e14;">Score 4</span> <strong>Challenging:</strong> In-depth theory, tricky proofs, or heavy problem-solving. Regular tutoring or study groups may be needed.
+                        </li>
+                        <li class="mb-0">
+                            <span class="badge bg-danger me-2">Score 5</span> <strong>Extremely Difficult:</strong> Very complex, abstract, or fast-paced material. Students often struggle to keep up and may feel they barely grasped the subject despite significant effort.
+                        </li>
+                    </ul>
+                </div>
+            </section>
+
+            <hr class="my-5">
+
+            <!-- SECTION 3 -->
+            <section id="time-scale" class="mb-5">
+                <h4 class="fw-bold mb-3">3. How is Time Commitment (1–5) Defined?</h4>
+
+                <p>Time commitment measures the number of hours you must dedicate outside of scheduled lecture time for homework, readings, labs, and projects:</p>
+
+                <div class="card border-0 bg-light p-3 mb-3">
+                    <ul class="list-unstyled mb-0">
+                        <li class="mb-3">
+                            <span class="badge bg-success me-2">Score 1</span> <strong>Negligible:</strong> Almost no outside work required beyond attending class. Minimal or quick weekly assignments.
+                        </li>
+                        <li class="mb-3">
+                            <span class="badge bg-info text-dark me-2">Score 2</span> <strong>Light:</strong> 1 to 2 hours per week outside of lecture. Standard light readings or short weekly worksheets.
+                        </li>
+                        <li class="mb-3">
+                            <span class="badge bg-warning text-dark me-2">Score 3</span> <strong>Standard:</strong> Around 3 to 5 hours per week outside lecture. Regular problem sets, coding labs, or weekly quizzes.
+                        </li>
+                        <li class="mb-3">
+                            <span class="badge bg-orange text-white me-2" style="background-color: #fd7e14;">Score 4</span> <strong>Heavy:</strong> 6 to 9 hours weekly. Major semester projects, multi-stage lab reports, or mandatory weekly group meetings.
+                        </li>
+                        <li class="mb-0">
+                            <span class="badge bg-danger me-2">Score 5</span> <strong>Insane Workload:</strong> 10+ hours every week outside of class. The class feels like a full-time job with continuous, demanding deliverables.
+                        </li>
+                    </ul>
+                </div>
+            </section>
+
+            <hr class="my-5">
+
+            <!-- SECTION 4 -->
+            <section id="course-calculator" class="mb-5">
+                <h4 class="fw-bold mb-3">4. How Does the Course Load Calculator Work?</h4>
+
+                <p>
+                    The <strong>Course Load Calculator</strong> takes the courses you intend to enroll in for an upcoming semester and aggregates their peer review ratings.
+                </p>
+
+                <ul>
+                    <li>It computes your <strong>Total Credits</strong>.</li>
+                    <li>It averages the <strong>Difficulty Scores</strong> and <strong>Time Scores</strong> submitted by previous students.</li>
+                    <li>It lets you set your personal <strong>limits</strong> (e.g. keeping difficulty below 3.5) and visualizes whether your intended schedule fits your goals.</li>
+                    <li>If you are logged into your account, you can <strong>save your schedule</strong> so you can revisit and edit it anytime.</li>
+                </ul>
+            </section>
+
+            <hr class="my-5">
+
+            <!-- SECTION 5 -->
+            <section id="accounts" class="mb-5">
+                <h4 class="fw-bold mb-3">5. Why Do I Need a UWM Email to Register?</h4>
+
+                <p>
+                    To maintain authenticity and prevent spam, account creation requires an official <code>@uwm.edu</code> email address. We send a 6-digit verification code to confirm that every reviewer is an active member of the campus community.
+                </p>
+
+                <div class="alert alert-light border">
+                    <strong>Note:</strong> You can search for courses and read reviews without an account. An account is only required to submit reviews and save custom schedules.
+                </div>
+            </section>
+
+            <hr class="my-5">
+
+            <!-- SECTION 6 -->
+            <section id="privacy" class="mb-5">
+                <h4 class="fw-bold mb-3">6. Are My Reviews Anonymous?</h4>
+
+                <p>
+                    Your reviews display your <strong>public username</strong> and (optionally) your <strong>major</strong>. Your real name, student ID number, and email address are never displayed publicly.
+                </p>
+
+                <p>
+                    You can also edit or delete any reviews you have submitted at any time through your <strong>My Profile</strong> page.
+                </p>
+            </section>
+
+            <hr class="my-5">
+
+            <!-- SECTION 7 -->
+            <section id="affiliation" class="mb-5">
+                <h4 class="fw-bold mb-3">7. Is RateMyUWM Affiliated with UWM Administration?</h4>
+
+                <p>
+                    No. RateMyUWM is an independent student-run capstone project created by UWM students for UWM students. It is not managed, sponsored, or affiliated with the University of Wisconsin-Milwaukee administration or faculty.
+                </p>
+            </section>
+
+            <div class="border-top pt-4 mt-5">
+                <p class="text-muted small mb-0">
+                    Have more questions? Check our <a href="{% url 'privacy_policy' %}" class="text-decoration-none">Privacy Policy</a> or contact us.
+                </p>
+            </div>
+
+        </main>
+    </div>
+</div>
+
+{% endblock %}

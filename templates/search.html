@@ -7,40 +7,317 @@
 
 <div class="container py-4">
 
-    <h1 class="mb-3">Find a Course</h1>
-    <p class="text-muted">Search by course code, name, or professor.</p>
+    <div class="mb-4">
+        <h1 class="fw-bold mb-1">Find a Course</h1>
+        <p class="text-muted mb-0">Search by course code, name, or professor.</p>
+    </div>
 
-    <form method="GET" action="{% url 'search' %}" class="mb-4">
-        <div class="input-group input-group-lg">
+    <form method="GET" action="{% url 'search' %}" id="search-form" class="mb-4 position-relative">
+        <div class="input-group input-group-lg shadow-sm rounded-4 overflow-hidden border bg-white">
             <input
                 type="text"
                 name="query"
-                class="form-control"
+                id="search-input"
+                class="form-control border-0 shadow-none px-4"
                 placeholder="Try 'COMP SCI 351' or 'Algorithm' or 'Dr. Joe'..."
                 autocomplete="off"
                 value="{{ query }}"
             >
-            <button class="btn btn-primary" type="submit">
-                <i class="bi bi-search"></i> Search
+            <input type="hidden" name="department" value="{{ selected_department }}">
+            <input type="hidden" name="professor" value="{{ selected_professor }}">
+            <input type="hidden" name="credits" value="{{ selected_credits }}">
+            <input type="hidden" name="difficulty" value="{{ selected_difficulty }}">
+
+            <button class="btn btn-dark px-4 fw-semibold" type="submit">
+                <i class="bi bi-search me-1"></i> Search
             </button>
         </div>
+
+        <div
+            id="search-dropdown"
+            class="list-group position-absolute w-100 shadow-sm rounded-4 overflow-hidden mt-1 d-none"
+            style="z-index: 1000;"
+        ></div>
     </form>
 
-    {% if courses %}
-        <p class="text-muted small mb-2">
-            Showing {{ courses.start_index }}-{{ courses.end_index }}
-            of {{ paginator.count }} course{{ paginator.count|pluralize }}
-        </p>
-
-        <div class="list-group">
-            {% include "_course_items.html" %}
+    <div class="row g-4 align-items-start">
+        <div class="col-12 d-lg-none">
+            <button class="btn btn-outline-dark rounded-pill px-4 shadow-sm" type="button" data-bs-toggle="collapse" data-bs-target="#filterSidebar" aria-expanded="false" aria-controls="filterSidebar">
+                <i class="bi bi-funnel me-1"></i> Filters {% if selected_department or selected_professor or selected_credits or selected_difficulty %}(Applied){% endif %}
+            </button>
         </div>
 
-        {% include "_pagination.html" %}
-    {% else %}
-        <p class="text-muted mt-3">No courses match your search.</p>
-    {% endif %}
+        <div class="col-lg-3 collapse d-lg-block" id="filterSidebar">
+            <form method="GET" action="{% url 'search' %}" class="card shadow-sm border rounded-4 bg-light">
+                <div class="card-body p-4">
+                    <h5 class="card-title fw-bold mb-3">
+                        <i class="bi bi-funnel me-1"></i> Filter Courses
+                    </h5>
+
+                    <input type="hidden" name="query" value="{{ query }}">
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-muted">Department</label>
+                        <select name="department" class="form-select form-select-sm rounded-3">
+                            <option value="">All Departments</option>
+                            {% for dept in departments %}
+                                <option value="{{ dept }}" {% if selected_department == dept %}selected{% endif %}>{{ dept }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-muted">Professor</label>
+                        <select name="professor" class="form-select form-select-sm rounded-3">
+                            <option value="">All Professors</option>
+                            {% for prof in professors %}
+                                <option value="{{ prof.id }}" {% if selected_professor == prof.id %}selected{% endif %}>{{ prof.professor_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-muted">Credits</label>
+                        <select name="credits" class="form-select form-select-sm rounded-3">
+                            <option value="">Any Credits</option>
+                            {% for c in credit_options %}
+                                <option value="{{ c }}" {% if selected_credits == c|stringformat:"s" %}selected{% endif %}>{{ c }} Credits</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label small fw-semibold text-muted">Difficulty</label>
+                        <select name="difficulty" class="form-select form-select-sm rounded-3">
+                            <option value="">Any Difficulty</option>
+                            <option value="1" {% if selected_difficulty == "1" %}selected{% endif %}>1 - Easy</option>
+                            <option value="2" {% if selected_difficulty == "2" %}selected{% endif %}>2</option>
+                            <option value="3" {% if selected_difficulty == "3" %}selected{% endif %}>3 - Moderate</option>
+                            <option value="4" {% if selected_difficulty == "4" %}selected{% endif %}>4</option>
+                            <option value="5" {% if selected_difficulty == "5" %}selected{% endif %}>5 - Hard</option>
+                        </select>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-dark btn-sm rounded-pill py-2 fw-semibold">Apply Filters</button>
+                        <a href="{% url 'search' %}" class="btn btn-outline-secondary btn-sm rounded-pill py-2">Reset All</a>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <div class="col-lg-9">
+            {% if courses %}
+                <div class="d-flex justify-content-between align-items-center mb-3 px-1">
+                    <p class="text-muted small mb-0">
+                        Showing <strong>{{ courses.start_index }}-{{ courses.end_index }}</strong>
+                        of <strong>{{ paginator.count }}</strong> course{{ paginator.count|pluralize }}
+                    </p>
+                </div>
+
+                <div class="list-group shadow-sm rounded-4 overflow-hidden mb-4">
+                    {% include "_course_items.html" %}
+                </div>
+
+                {% if courses.has_other_pages %}
+                    <nav class="d-flex justify-content-center my-4" aria-label="Course pages">
+                        <ul class="pagination pagination-sm gap-2 mb-0">
+
+                            {% if courses.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link rounded-pill text-dark"
+                                       href="?query={{ query|urlencode }}&department={{ selected_department|urlencode }}&professor={{ selected_professor|urlencode }}&credits={{ selected_credits|urlencode }}&difficulty={{ selected_difficulty|urlencode }}&page={{ courses.previous_page_number }}">
+                                        Previous
+                                    </a>
+                                </li>
+                            {% else %}
+                                <li class="page-item disabled">
+                                    <span class="page-link rounded-pill">Previous</span>
+                                </li>
+                            {% endif %}
+
+                            {% for num in courses.paginator.page_range %}
+                                {% if courses.number == num %}
+                                    <li class="page-item active" aria-current="page">
+                                        <span class="page-link rounded-pill bg-dark border-dark text-white">
+                                            {{ num }}
+                                        </span>
+                                    </li>
+                                {% elif num > courses.number|add:'-3' and num < courses.number|add:'3' %}
+                                    <li class="page-item">
+                                        <a class="page-link rounded-pill text-dark"
+                                           href="?query={{ query|urlencode }}&department={{ selected_department|urlencode }}&professor={{ selected_professor|urlencode }}&credits={{ selected_credits|urlencode }}&difficulty={{ selected_difficulty|urlencode }}&page={{ num }}">
+                                            {{ num }}
+                                        </a>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+
+                            {% if courses.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link rounded-pill text-dark"
+                                       href="?query={{ query|urlencode }}&department={{ selected_department|urlencode }}&professor={{ selected_professor|urlencode }}&credits={{ selected_credits|urlencode }}&difficulty={{ selected_difficulty|urlencode }}&page={{ courses.next_page_number }}">
+                                        Next
+                                    </a>
+                                </li>
+                            {% else %}
+                                <li class="page-item disabled">
+                                    <span class="page-link rounded-pill">Next</span>
+                                </li>
+                            {% endif %}
+
+                        </ul>
+                    </nav>
+                {% endif %}
+            {% else %}
+                <div class="card border rounded-4 shadow-sm text-center py-5">
+                    <div class="card-body">
+                        <p class="text-muted mb-0">No courses match your search or filter criteria.</p>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+
+    </div>
 
 </div>
+
+<script>
+    const searchForm = document.getElementById('search-form');
+    const searchInput = document.getElementById('search-input');
+    const searchDropdown = document.getElementById('search-dropdown');
+    let searchTimeout;
+
+    function getRecentSearches() {
+        return JSON.parse(localStorage.getItem('recentSearchQueries')) || [];
+    }
+
+    function saveRecentSearch(term) {
+        const cleaned = term.trim();
+        if (!cleaned) return;
+
+        let recent = getRecentSearches().filter(item => item.toLowerCase() !== cleaned.toLowerCase());
+        recent.unshift(cleaned);
+        localStorage.setItem('recentSearchQueries', JSON.stringify(recent.slice(0, 5)));
+    }
+
+    function showRecentSearches() {
+        const recent = getRecentSearches();
+        searchDropdown.innerHTML = '';
+
+        if (!recent.length) {
+            searchDropdown.classList.add('d-none');
+            return;
+        }
+
+        const header = document.createElement('div');
+        header.className = 'list-group-item d-flex justify-content-between align-items-center bg-light py-2 px-3';
+
+        const label = document.createElement('span');
+        label.className = 'small fw-semibold text-muted';
+        label.textContent = 'Recent searches';
+
+        const clearBtn = document.createElement('button');
+        clearBtn.type = 'button';
+        clearBtn.className = 'btn btn-link btn-sm text-muted text-decoration-none p-0';
+        clearBtn.textContent = 'Clear';
+        clearBtn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            localStorage.removeItem('recentSearchQueries');
+            searchDropdown.classList.add('d-none');
+        });
+
+        header.append(label, clearBtn);
+        searchDropdown.appendChild(header);
+
+        recent.forEach(term => {
+            const item = document.createElement('button');
+            item.type = 'button';
+            item.className = 'list-group-item list-group-item-action px-3 py-2 d-flex align-items-center gap-2';
+
+            const icon = document.createElement('i');
+            icon.className = 'bi bi-clock-history text-muted';
+
+            item.append(icon, document.createTextNode(term));
+            item.addEventListener('click', function () {
+                searchInput.value = term;
+                saveRecentSearch(term);
+                searchForm.submit();
+            });
+
+            searchDropdown.appendChild(item);
+        });
+
+        searchDropdown.classList.remove('d-none');
+    }
+
+    if (searchInput.value.trim()) {
+        saveRecentSearch(searchInput.value);
+    }
+
+    searchForm.addEventListener('submit', function () {
+        saveRecentSearch(searchInput.value);
+    });
+
+    searchInput.addEventListener('focus', function () {
+        if (!this.value.trim()) {
+            showRecentSearches();
+        }
+    });
+
+    searchInput.addEventListener('input', function () {
+        const query = this.value.trim();
+        clearTimeout(searchTimeout);
+
+        if (!query) {
+            showRecentSearches();
+            return;
+        }
+
+        if (query.length < 2) {
+            searchDropdown.classList.add('d-none');
+            return;
+        }
+
+        searchTimeout = setTimeout(function () {
+            fetch(`{% url 'course_lookup' %}?q=${encodeURIComponent(query)}`)
+                .then(response => response.json())
+                .then(data => {
+                    searchDropdown.innerHTML = '';
+
+                    if (!data.results.length) {
+                        searchDropdown.innerHTML = '<div class="list-group-item text-muted py-2 px-3">No courses found.</div>';
+                        searchDropdown.classList.remove('d-none');
+                        return;
+                    }
+
+                    data.results.forEach(course => {
+                        const item = document.createElement('a');
+                        item.href = `/courses/${course.id}/`;
+                        item.className = 'list-group-item list-group-item-action px-3 py-2 d-flex align-items-center gap-2';
+
+                        const icon = document.createElement('i');
+                        icon.className = 'bi bi-search text-muted';
+
+                        item.append(icon, document.createTextNode(course.label));
+                        item.addEventListener('click', function () {
+                            saveRecentSearch(course.label);
+                        });
+
+                        searchDropdown.appendChild(item);
+                    });
+
+                    searchDropdown.classList.remove('d-none');
+                })
+                .catch(error => console.error('Course lookup error:', error));
+        }, 250);
+    });
+
+    document.addEventListener('click', function (event) {
+        if (!searchForm.contains(event.target)) {
+            searchDropdown.classList.add('d-none');
+        }
+    });
+</script>
 
 {% endblock %}

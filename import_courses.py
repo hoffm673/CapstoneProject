@@ -18,32 +18,48 @@ def parse_course(val):
     except (ValueError, TypeError):
         return None
 
+
 def import_courses(path):
     wb = openpyxl.load_workbook(path, data_only=True)
     ws = wb.active
+
     imported = 0
     skipped = []
+
     for row in ws.iter_rows(min_row=2, values_only=True):
-        code, title, credits_raw, description = row[0], row[1], row[2], row[3]
+        code = row[0]          # Column A: Course Code
+        major = row[1]         # Column B: Major
+        title = row[2]         # Column C: Course Title
+        credits_raw = row[3]   # Column D: Course Credits
+        description = row[4]   # Column E: Course Description
+
         if code is None or title is None:
             continue
+
         credits = parse_course(credits_raw)
+
         if credits is None:
             skipped.append((code, title, credits_raw))
             continue
+
         Course.objects.update_or_create(
             course_code=str(code).strip(),
             defaults={
-               'course_name': str(title).strip(),
-               'course_credits' : credits,
-               'course_details' : str(description).strip() if description else '',
+                'course_name': str(title).strip(),
+                'course_credits': credits,
+                'course_details': str(description).strip() if description else '',
+                'major': str(major).strip() if major else '',
             }
         )
+
         imported += 1
+
     print(f"Imported {imported} courses.")
     print(f"Skipped {len(skipped)} courses with credit ranges:")
+
     for code, title, raw in skipped:
         print(f"  {code} - {title} (credits: {raw!r})")
+
 if __name__ == '__main__':
     if len(sys.argv) != 2:
         print("Usage: python import_courses.py path/to/catalog.xlsx")

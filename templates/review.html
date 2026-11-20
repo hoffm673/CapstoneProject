@@ -31,11 +31,11 @@
         border-bottom-right-radius: 999px;
     }
 
-    .rating-segment.color-1 { background-color: #f4a4a4; }
-    .rating-segment.color-2 { background-color: #f5c396; }
+    .rating-segment.color-1 { background-color: #93d69b; }
+    .rating-segment.color-2 { background-color: #c5e3a5; }
     .rating-segment.color-3 { background-color: #f5e29e; }
-    .rating-segment.color-4 { background-color: #c5e3a5; }
-    .rating-segment.color-5 { background-color: #93d69b; }
+    .rating-segment.color-4 { background-color: #f5c396; }
+    .rating-segment.color-5 { background-color: #f4a4a4; }
 </style>
 
 <div class="container py-4">
@@ -43,188 +43,180 @@
         <div class="col-lg-8 col-xl-7">
 
             <div class="mb-3">
-                <h3 class="fw-bold mb-1">Write a Review</h3>
-                <p class="text-muted small mb-0">
+                <h1 class="h3 fw-bold mb-1">Write a Review</h1>
+                <p class="text-secondary small mb-0">
                     Share your experience to help other UWM students choose their classes.
                 </p>
             </div>
 
             {% if error %}
-                <div class="alert alert-danger py-2">{{ error }}</div>
+                <div class="alert alert-danger rounded-4 py-2">{{ error }}</div>
             {% endif %}
 
             {% if success %}
-                <div class="alert alert-success py-2">{{ success }}</div>
+                <div class="alert alert-success rounded-4 py-2">{{ success }}</div>
             {% endif %}
 
             <form method="POST" id="review-form">
                 {% csrf_token %}
 
                 <!-- Course & Professor -->
-                <div class="card border shadow-sm rounded-3 mb-3">
-                    <div class="card-body p-3">
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label for="course-search" class="form-label fw-semibold small mb-1">
-                                    Course <span class="text-danger">*</span>
-                                </label>
-                                <div class="position-relative">
-                                    <div class="input-group input-group-sm">
-                                        <span class="input-group-text bg-white">
-                                            <i class="bi bi-search"></i>
-                                        </span>
-                                        <input
-                                            type="text"
-                                            class="form-control"
-                                            id="course-search"
-                                            placeholder="Search code or name..."
-                                            autocomplete="off"
-                                            required
-                                        >
-                                    </div>
-                                    <input type="hidden" name="course" id="course">
-                                    <div
-                                        id="course-results"
-                                        class="list-group position-absolute w-100 shadow-sm mt-1 small"
-                                        style="z-index: 1000;"
-                                    ></div>
-                                </div>
-                            </div>
-
-                            <div class="col-md-6">
-                                <div class="d-flex justify-content-between align-items-center mb-1">
-                                    <label for="professor" class="form-label fw-semibold small mb-0">
-                                        Professor <span class="text-danger">*</span>
-                                    </label>
-                                    <button
-                                        type="button"
-                                        id="add-professor-btn"
-                                        class="btn btn-link btn-sm p-0 text-decoration-none"
-                                        style="font-size: 0.8rem;"
-                                    >
-                                        + Not listed?
-                                    </button>
-                                </div>
-
-                                <select class="form-select form-select-sm" id="professor" name="professor" required>
-                                    <option value="" selected disabled>Select a professor</option>
-                                    {% for professor in professors %}
-                                        <option value="{{ professor.id }}">{{ professor.professor_name }}</option>
-                                    {% endfor %}
-                                    <option value="__new__" hidden>Adding a new professor...</option>
-                                </select>
-
-                                <div class="mt-2 d-none" id="new-professor-section">
+                <div class="border rounded-4 bg-white p-3 mb-3">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="course-search" class="form-label fw-semibold small mb-1">
+                                Course <span class="text-danger">*</span>
+                            </label>
+                            <div class="position-relative">
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text bg-white">
+                                        <i class="bi bi-search"></i>
+                                    </span>
                                     <input
                                         type="text"
-                                        class="form-control form-control-sm"
-                                        id="new_professor_name"
-                                        name="new_professor_name"
-                                        maxlength="100"
-                                        placeholder="Enter professor's name"
+                                        class="form-control"
+                                        id="course-search"
+                                        placeholder="Search code or name..."
+                                        autocomplete="off"
+                                        required
                                     >
                                 </div>
+                                <input type="hidden" name="course" id="course">
+                                <div
+                                    id="course-results"
+                                    class="list-group position-absolute w-100 shadow-sm rounded-3 overflow-hidden mt-1 small"
+                                    style="z-index: 1000;"
+                                ></div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <label for="professor" class="form-label fw-semibold small mb-0">
+                                    Professor <span class="text-danger">*</span>
+                                </label>
+                                <button
+                                    type="button"
+                                    id="add-professor-btn"
+                                    class="btn btn-link btn-sm p-0 text-dark text-decoration-none"
+                                    style="font-size: 0.8rem;"
+                                >
+                                    + Not listed?
+                                </button>
+                            </div>
+
+                            <select class="form-select form-select-sm" id="professor" name="professor" required>
+                                <option value="" selected disabled>Select a professor</option>
+                                {% for professor in professors %}
+                                    <option value="{{ professor.id }}">{{ professor.professor_name }}</option>
+                                {% endfor %}
+                                <option value="__new__" hidden>Adding a new professor...</option>
+                            </select>
+
+                            <div class="mt-2 d-none" id="new-professor-section">
+                                <input
+                                    type="text"
+                                    class="form-control form-control-sm"
+                                    id="new_professor_name"
+                                    name="new_professor_name"
+                                    maxlength="100"
+                                    placeholder="Enter professor's name"
+                                >
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Ratings -->
-                <div class="card border shadow-sm rounded-3 mb-3">
-                    <div class="card-body p-3">
-                        <div class="row g-3 text-center">
+                <div class="border rounded-4 bg-white p-3 mb-3">
+                    <div class="row g-3 text-center">
 
-                            <!-- Difficulty -->
-                            <div class="col-md-6">
-                                <div class="text-start mb-2">
-                                    <span class="fw-semibold small">Difficulty <span class="text-danger">*</span></span>
-                                </div>
-
-                                <input type="hidden" id="difficulty_score" name="difficulty_score" value="3" required>
-
-                                <div class="rating-bar" id="difficulty-bar" data-target="difficulty_score" data-label="difficulty-label">
-                                    <button type="button" class="rating-segment" data-value="1" aria-label="1"></button>
-                                    <button type="button" class="rating-segment" data-value="2" aria-label="2"></button>
-                                    <button type="button" class="rating-segment" data-value="3" aria-label="3"></button>
-                                    <button type="button" class="rating-segment" data-value="4" aria-label="4"></button>
-                                    <button type="button" class="rating-segment" data-value="5" aria-label="5"></button>
-                                </div>
-
-                                <div class="text-muted small mt-2" id="difficulty-label">3 - Moderate</div>
+                        <!-- Difficulty -->
+                        <div class="col-md-6">
+                            <div class="text-start mb-2">
+                                <span class="fw-semibold small">Difficulty <span class="text-danger">*</span></span>
                             </div>
 
-                            <!-- Time Commitment -->
-                            <div class="col-md-6">
-                                <div class="text-start mb-2">
-                                    <span class="fw-semibold small">Time Commitment <span class="text-danger">*</span></span>
-                                </div>
+                            <input type="hidden" id="difficulty_score" name="difficulty_score" value="3" required>
 
-                                <input type="hidden" id="time_score" name="time_score" value="3" required>
-
-                                <div class="rating-bar" id="time-bar" data-target="time_score" data-label="time-label">
-                                    <button type="button" class="rating-segment" data-value="1" aria-label="1"></button>
-                                    <button type="button" class="rating-segment" data-value="2" aria-label="2"></button>
-                                    <button type="button" class="rating-segment" data-value="3" aria-label="3"></button>
-                                    <button type="button" class="rating-segment" data-value="4" aria-label="4"></button>
-                                    <button type="button" class="rating-segment" data-value="5" aria-label="5"></button>
-                                </div>
-
-                                <div class="text-muted small mt-2" id="time-label">3 - Average</div>
+                            <div class="rating-bar" id="difficulty-bar" data-target="difficulty_score" data-label="difficulty-label">
+                                <button type="button" class="rating-segment" data-value="1" aria-label="1"></button>
+                                <button type="button" class="rating-segment" data-value="2" aria-label="2"></button>
+                                <button type="button" class="rating-segment" data-value="3" aria-label="3"></button>
+                                <button type="button" class="rating-segment" data-value="4" aria-label="4"></button>
+                                <button type="button" class="rating-segment" data-value="5" aria-label="5"></button>
                             </div>
 
+                            <div class="text-secondary small mt-2" id="difficulty-label">3 - Moderate</div>
                         </div>
+
+                        <!-- Time Commitment -->
+                        <div class="col-md-6">
+                            <div class="text-start mb-2">
+                                <span class="fw-semibold small">Time Commitment <span class="text-danger">*</span></span>
+                            </div>
+
+                            <input type="hidden" id="time_score" name="time_score" value="3" required>
+
+                            <div class="rating-bar" id="time-bar" data-target="time_score" data-label="time-label">
+                                <button type="button" class="rating-segment" data-value="1" aria-label="1"></button>
+                                <button type="button" class="rating-segment" data-value="2" aria-label="2"></button>
+                                <button type="button" class="rating-segment" data-value="3" aria-label="3"></button>
+                                <button type="button" class="rating-segment" data-value="4" aria-label="4"></button>
+                                <button type="button" class="rating-segment" data-value="5" aria-label="5"></button>
+                            </div>
+
+                            <div class="text-secondary small mt-2" id="time-label">3 - Average</div>
+                        </div>
+
                     </div>
                 </div>
 
                 <!-- Tags & Written Review -->
-                <div class="card border shadow-sm rounded-3 mb-3">
-                    <div class="card-body p-3">
-
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold small d-block mb-2">Tags</label>
-                            <div class="d-flex flex-wrap gap-1">
-                                {% for tag in tags %}
-                                    <input
-                                        type="checkbox"
-                                        class="btn-check"
-                                        name="review_tags"
-                                        value="{{ tag.id }}"
-                                        id="tag-{{ tag.id }}"
-                                        autocomplete="off"
-                                    >
-                                    <label
-                                        class="btn btn-outline-secondary btn-sm rounded-pill py-0 px-2"
-                                        style="font-size: 0.8rem;"
-                                        for="tag-{{ tag.id }}"
-                                    >
-                                        {{ tag.tag_name }}
-                                    </label>
-                                {% endfor %}
-                            </div>
+                <div class="border rounded-4 bg-white p-3 mb-3">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small d-block mb-2">Tags</label>
+                        <div class="d-flex flex-wrap gap-2">
+                            {% for tag in tags %}
+                                <input
+                                    type="checkbox"
+                                    class="btn-check"
+                                    name="review_tags"
+                                    value="{{ tag.id }}"
+                                    id="tag-{{ tag.id }}"
+                                    autocomplete="off"
+                                >
+                                <label
+                                    class="btn btn-outline-dark btn-sm rounded-pill px-3 py-1"
+                                    style="font-size: 0.8rem;"
+                                    for="tag-{{ tag.id }}"
+                                >
+                                    {{ tag.tag_name }}
+                                </label>
+                            {% endfor %}
                         </div>
+                    </div>
 
-                        <div>
-                            <label for="review_text" class="form-label fw-semibold small mb-1">
-                                Your Review <span class="text-danger">*</span>
-                            </label>
-                            <textarea
-                                class="form-control form-control-sm"
-                                id="review_text"
-                                name="review_text"
-                                rows="4"
-                                placeholder="Share your experience with the workload, assignments, exams, and anything else helpful..."
-                                required
-                            ></textarea>
-                            <div class="form-text small">Keep your feedback helpful and respectful.</div>
-                        </div>
-
+                    <div>
+                        <label for="review_text" class="form-label fw-semibold small mb-1">
+                            Your Review <span class="text-danger">*</span>
+                        </label>
+                        <textarea
+                            class="form-control form-control-sm rounded-3"
+                            id="review_text"
+                            name="review_text"
+                            rows="4"
+                            placeholder="Share your experience with the workload, assignments, exams, and anything else helpful..."
+                            required
+                        ></textarea>
+                        <div class="form-text small text-secondary">Keep your feedback helpful and respectful.</div>
                     </div>
                 </div>
 
                 <!-- Submit -->
                 <div class="d-flex justify-content-end gap-2">
-                    <a href="{% url 'home' %}" class="btn btn-outline-secondary btn-sm px-3">Cancel</a>
-                    <button type="submit" class="btn btn-primary btn-sm px-4">Submit Review</button>
+                    <a href="{% url 'home' %}" class="btn btn-outline-secondary btn-sm rounded-pill px-4">Cancel</a>
+                    <button type="submit" class="btn btn-dark btn-sm rounded-pill px-4">Submit Review</button>
                 </div>
 
             </form>

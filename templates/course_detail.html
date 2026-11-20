@@ -101,11 +101,11 @@
                                         </span>
 
                                         <div class="rating-bar rating-bar-sm">
-                                            <span class="rating-segment {% if row.pct >= 10 %}color-{{ forloop.revcounter }}{% endif %}"></span>
-                                            <span class="rating-segment {% if row.pct >= 30 %}color-{{ forloop.revcounter }}{% endif %}"></span>
-                                            <span class="rating-segment {% if row.pct >= 50 %}color-{{ forloop.revcounter }}{% endif %}"></span>
-                                            <span class="rating-segment {% if row.pct >= 70 %}color-{{ forloop.revcounter }}{% endif %}"></span>
-                                            <span class="rating-segment {% if row.pct >= 90 %}color-{{ forloop.revcounter }}{% endif %}"></span>
+                                            <span class="rating-segment {% if row.pct >= 10 %}color-{{ forloop.counter }}{% endif %}"></span>
+                                            <span class="rating-segment {% if row.pct >= 30 %}color-{{ forloop.counter }}{% endif %}"></span>
+                                            <span class="rating-segment {% if row.pct >= 50 %}color-{{ forloop.counter }}{% endif %}"></span>
+                                            <span class="rating-segment {% if row.pct >= 70 %}color-{{ forloop.counter }}{% endif %}"></span>
+                                            <span class="rating-segment {% if row.pct >= 90 %}color-{{ forloop.counter }}{% endif %}"></span>
                                         </div>
 
                                         <span class="small text-secondary" style="width: 24px; font-size: 0.8rem;">

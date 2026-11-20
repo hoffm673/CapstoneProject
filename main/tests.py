@@ -2,8 +2,7 @@ from django.core import mail
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
-from .models import Course, Professor, Review, User
-
+from .models import Course, Professor, Review, ReviewTag, User
 
 class CourseDetailTests(TestCase):
     """Tests for the course detail page and the search-page entry point."""
@@ -337,3 +336,73 @@ class ProfileManagementTests(TestCase):
         self.assertContains(response, 'Your old password was entered incorrectly')
         self.user.refresh_from_db()
         self.assertTrue(self.user.check_password('OldSecurePass123!'))
+
+
+class ReviewTagTests(TestCase):
+            """Tests for adding, removing, and sharing review tags."""
+
+            def setUp(self):
+                self.user = User.objects.create_user(
+                    username="tagtester",
+                    password="TestPass123!"
+                )
+
+                self.professor = Professor.objects.create(
+                    professor_name="Dr. Tag"
+                )
+
+                self.course = Course.objects.create(
+                    course_code="COMP SCI 150",
+                    course_name="Introduction to Computing",
+                    course_credits=3
+                )
+
+                self.review = Review.objects.create(
+                    review_user=self.user,
+                    review_course=self.course,
+                    review_professor=self.professor,
+                    difficulty_score=3,
+                    time_score=2,
+                    review_text="Good introductory course."
+                )
+
+                self.tag1, _ = ReviewTag.objects.get_or_create(tag_name="Tough Grader")
+                self.tag2, _ = ReviewTag.objects.get_or_create(tag_name="Interesting Content")
+
+            def test_add_tag_to_review(self):
+                """A review can have a tag added."""
+                self.review.review_tags.add(self.tag1)
+
+                self.assertIn(self.tag1, self.review.review_tags.all())
+
+            def test_add_multiple_tags_to_review(self):
+                """A review can have multiple tags."""
+                self.review.review_tags.add(self.tag1, self.tag2)
+
+                self.assertEqual(self.review.review_tags.count(), 2)
+
+            def test_remove_tag_from_review(self):
+                """Removing a tag does not delete the review."""
+                self.review.review_tags.add(self.tag1)
+                self.review.review_tags.remove(self.tag1)
+
+                self.assertEqual(self.review.review_tags.count(), 0)
+                self.assertTrue(Review.objects.filter(id=self.review.id).exists())
+
+            def test_tag_can_be_shared_between_reviews(self):
+                """Multiple reviews can use the same tag."""
+                second_review = Review.objects.create(
+                    review_user=self.user,
+                    review_course=self.course,
+                    review_professor=self.professor,
+                    difficulty_score=4,
+                    time_score=3,
+                    review_text="Another review of this course."
+                )
+
+                self.review.review_tags.add(self.tag1)
+                second_review.review_tags.add(self.tag1)
+
+                self.assertIn(self.tag1, self.review.review_tags.all())
+                self.assertIn(self.tag1, second_review.review_tags.all())
+

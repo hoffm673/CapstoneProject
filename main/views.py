@@ -242,6 +242,11 @@ def course_detail(request, course_id):
         'review_user__user_major'
     ).order_by('-review_date', '-id')
 
+    time_score_counts = {
+        f'time_{score}': Count('id', filter=Q(time_score=score))
+        for score in range(1, 6)
+    }
+
     # Aggregate in the database so the page can show summary values and the
     # rating distribution without manually iterating over every review.
     review_stats = review_qs.aggregate(
@@ -253,6 +258,7 @@ def course_detail(request, course_id):
         diff_3=Count('id', filter=Q(difficulty_score=3)),
         diff_2=Count('id', filter=Q(difficulty_score=2)),
         diff_1=Count('id', filter=Q(difficulty_score=1)),
+        **time_score_counts,
     )
 
     total = review_stats['review_count'] or 0
@@ -263,6 +269,32 @@ def course_detail(request, course_id):
         {'label': 'Easy (2)',   'count': review_stats['diff_2'], 'pct': round(review_stats['diff_2'] / total * 100) if total else 0},
         {'label': 'Chill (1)',  'count': review_stats['diff_1'], 'pct': round(review_stats['diff_1'] / total * 100) if total else 0},
     ]
+
+    max_rating_count = max(
+        [
+            review_stats[f'diff_{score}']
+            for score in range(1, 6)
+        ] + [
+            review_stats[f'time_{score}']
+            for score in range(1, 6)
+        ],
+        default=0
+    )
+    rating_distribution = []
+    for score in range(1, 6):
+        difficulty_count = review_stats[f'diff_{score}']
+        time_count = review_stats[f'time_{score}']
+        rating_distribution.append({
+            'score': score,
+            'difficulty_count': difficulty_count,
+            'time_count': time_count,
+            'difficulty_height': round(
+                difficulty_count / max_rating_count * 80
+            ) if max_rating_count else 0,
+            'time_height': round(
+                time_count / max_rating_count * 80
+            ) if max_rating_count else 0,
+        })
 
     paginator = Paginator(review_qs, 10)
     reviews = paginator.get_page(request.GET.get('page'))
@@ -293,6 +325,7 @@ def course_detail(request, course_id):
         'reviews': reviews,
         'review_stats': review_stats,
         'difficulty_distribution': difficulty_distribution,
+        'rating_distribution': rating_distribution,
         'similar_courses': similar_courses,
         'ai_summary': CourseAISummary.objects.filter(course=course).first(),
     })
@@ -345,6 +378,9 @@ def register_view(request):
         pwd = request.POST.get('password', '')
         pwd_confirm = request.POST.get('password_confirm', '')
         selected_major_id = request.POST.get('major', '').strip()
+        email_pattern = r"^[A-Za-z0-9._%+-]+@uwm\.edu$"
+        username_pattern = r"^[A-Za-z0-9._-]{3,20}$"
+        password_pattern = r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$"
 
         # Validation rules
         if pwd != pwd_confirm:
@@ -353,9 +389,27 @@ def register_view(request):
                 'majors': available_majors
             })
 
+        if not re.match(username_pattern, uname):
+            return render(request, 'Registration/register.html', {
+                'error': 'Username must be 3-20 characters and can only contain letters, numbers, periods, underscores, and hyphens.',
+                'majors': available_majors
+            })
+
+        if not re.match(password_pattern, pwd):
+            return render(request, 'Registration/register.html', {
+                'error': 'Password must be at least 8 characters and contain at least one uppercase letter, one lowercase letter, one number, and one special character.',
+                'majors': available_majors
+            })
+
         if User.objects.filter(username=uname).exists():
             return render(request, 'Registration/register.html', {
                 'error': 'Username already taken.',
+                'majors': available_majors
+            })
+
+        if not re.match(email_pattern, user_email):
+            return render(request, 'Registration/register.html', {
+                'error': 'Must use a valid UWM email address to register.',
                 'majors': available_majors
             })
 
@@ -387,7 +441,7 @@ def register_view(request):
 
         send_mail(
             "Verify your account",
-            f"Your code is: {v_code}",
+            f"Your verification code is: {v_code}",
             getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@uwm.edu'),
             [new_user.email],
             fail_silently=False,

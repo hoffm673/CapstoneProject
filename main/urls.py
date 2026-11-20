@@ -11,7 +11,7 @@ urlpatterns = [
     path('profile/', views.my_profile, name='my_profile'),
     path('reviews/<int:review_id>/edit/', views.edit_review, name='edit_review'),
     path('reviews/<int:review_id>/delete/', views.delete_review, name='delete_review'),
-    path('faq/', views.faq, name='faq'), 
+    path('faq/', views.faq, name='faq'),
     path('privacy-policy/', views.privacy_policy, name='privacy_policy'),
 
 #login / register

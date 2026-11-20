@@ -121,6 +121,75 @@
 
             </div>
 
+            <section class="border rounded-4 bg-white overflow-hidden mb-4 p-3"
+                     aria-labelledby="rating-distribution-heading">
+                <h2 class="h6 fw-bold mb-1" id="rating-distribution-heading">
+                    Rating distribution
+                </h2>
+                <p class="text-secondary small mb-3">Number of reviews at each score (1–5)</p>
+
+                {% if review_stats.review_count %}
+                    <div class="rating-histogram__legend d-flex align-items-center justify-content-center gap-2 mb-2">
+                        <span class="rating-histogram__legend-item">
+                            <span class="rating-histogram__legend-swatch rating-histogram__legend-swatch--difficulty"></span>
+                            Difficulty
+                        </span>
+                        <span class="rating-histogram__legend-item">
+                            <span class="rating-histogram__legend-swatch rating-histogram__legend-swatch--time"></span>
+                            Time consumption
+                        </span>
+                    </div>
+
+                    <div class="rating-histogram" aria-hidden="true">
+                        <div class="rating-histogram__axis-label">Reviews</div>
+                        <div class="rating-histogram__plot">
+                            {% for bucket in rating_distribution %}
+                                <div class="rating-histogram__group">
+                                    <div class="rating-histogram__bars">
+                                        <div class="rating-histogram__bar-item">
+                                            <span class="rating-histogram__value" style="bottom: calc({{ bucket.difficulty_height }}% + .25rem)">{{ bucket.difficulty_count }}</span>
+                                            <div class="rating-histogram__bar rating-histogram__bar--difficulty" style="height: {{ bucket.difficulty_height }}%"></div>
+                                        </div>
+                                        <div class="rating-histogram__bar-item">
+                                            <span class="rating-histogram__value" style="bottom: calc({{ bucket.time_height }}% + .25rem)">{{ bucket.time_count }}</span>
+                                            <div class="rating-histogram__bar rating-histogram__bar--time" style="height: {{ bucket.time_height }}%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        <div class="rating-histogram__scale">
+                            {% for bucket in rating_distribution %}
+                                <span class="rating-histogram__segment rating-scale-{{ bucket.score }}">{{ bucket.score }}</span>
+                            {% endfor %}
+                        </div>
+                        <div class="rating-histogram__x-label">Score</div>
+                    </div>
+
+                    <table class="visually-hidden">
+                        <caption>Review counts by difficulty and time-consumption score</caption>
+                        <thead>
+                            <tr>
+                                <th scope="col">Score</th>
+                                <th scope="col">Difficulty reviews</th>
+                                <th scope="col">Time-consumption reviews</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for bucket in rating_distribution %}
+                                <tr>
+                                    <th scope="row">{{ bucket.score }}</th>
+                                    <td>{{ bucket.difficulty_count }}</td>
+                                    <td>{{ bucket.time_count }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <p class="text-secondary small mb-0">No ratings to display yet.</p>
+                {% endif %}
+            </section>
+
             {% include "_ai_summary.html" with summary=ai_summary %}
             {% include "_similar_courses.html" %}
 

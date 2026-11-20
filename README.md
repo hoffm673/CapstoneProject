@@ -106,7 +106,7 @@ python manage.py build_similar_courses
 ```
 **d) (Optional) Add test reviews :**
 ```bash
-oython seedreviews.py
+python seedreviews.py
 ```
 
 ### 7. Create an admin account
@@ -114,7 +114,7 @@ oython seedreviews.py
 python manage.py createsuperuser
 ```
 
-### 8.  Run the development
+### 8.  Run the development enviroment
 ```bash
 python manage.py runserver
 ```

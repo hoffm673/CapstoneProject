@@ -30,38 +30,6 @@ from django.db.models import BooleanField
 
 
 
-def home(request):
-    """Render the home page with the two most recent course reviews."""
-    reviews = Review.objects.select_related(
-        'review_course',
-        'review_professor',
-        'review_user__user_major'
-    ).annotate(
-        course_review_count=Count('review_course__review')
-    )
-
-    sort_by = request.GET.get('sort', 'recent')
-
-    if sort_by == 'popular':
-        reviews = reviews.order_by('-course_review_count', '-review_date', '-id')
-    else:
-        reviews = reviews.order_by('-review_date', '-id')
-
-    recent_reviews = reviews[:2]
-
-    popular = Course.objects.annotate(
-        review_count=Count('review')
-    ).filter(
-        review_count__gt=0
-    ).order_by('-review_count')[:4]
-
-    return render(request, 'home.html', {
-        'recent_reviews': recent_reviews,
-        'sort_by': sort_by,
-        'popular': popular,
-    })
-
-
 @login_required
 def review(request):
     """Submit a review, optionally adding a professor missing from the list."""
@@ -267,18 +235,35 @@ def course_detail(request, course_id):
 
     # Reviews are reused for both the list and summary stats; select_related
     # avoids one extra query per review for professor/user/major data.
-    reviews = Review.objects.filter(review_course=course).select_related(
+    review_qs = Review.objects.filter(review_course=course).select_related(
         'review_professor',
         'review_user__user_major'
     ).order_by('-review_date', '-id')
 
-    # Aggregate in the database so the page can show summary values without
-    # manually iterating over every review in Python.
-    review_stats = reviews.aggregate(
+    # Aggregate in the database so the page can show summary values and the
+    # rating distribution without manually iterating over every review.
+    review_stats = review_qs.aggregate(
         review_count=Count('id'),
         average_difficulty=Avg('difficulty_score'),
-        average_time=Avg('time_score')
+        average_time=Avg('time_score'),
+        diff_5=Count('id', filter=Q(difficulty_score=5)),
+        diff_4=Count('id', filter=Q(difficulty_score=4)),
+        diff_3=Count('id', filter=Q(difficulty_score=3)),
+        diff_2=Count('id', filter=Q(difficulty_score=2)),
+        diff_1=Count('id', filter=Q(difficulty_score=1)),
     )
+
+    total = review_stats['review_count'] or 0
+    difficulty_distribution = [
+        {'label': 'Brutal (5)', 'count': review_stats['diff_5'], 'pct': round(review_stats['diff_5'] / total * 100) if total else 0},
+        {'label': 'Hard (4)',   'count': review_stats['diff_4'], 'pct': round(review_stats['diff_4'] / total * 100) if total else 0},
+        {'label': 'Medium (3)', 'count': review_stats['diff_3'], 'pct': round(review_stats['diff_3'] / total * 100) if total else 0},
+        {'label': 'Easy (2)',   'count': review_stats['diff_2'], 'pct': round(review_stats['diff_2'] / total * 100) if total else 0},
+        {'label': 'Chill (1)',  'count': review_stats['diff_1'], 'pct': round(review_stats['diff_1'] / total * 100) if total else 0},
+    ]
+
+    paginator = Paginator(review_qs, 10)
+    reviews = paginator.get_page(request.GET.get('page'))
 
     # Precomputed by `manage.py build_similar_courses`. Pull each similar
     # course's review averages in the same query so cards can show them.
@@ -305,10 +290,10 @@ def course_detail(request, course_id):
         'course': course,
         'reviews': reviews,
         'review_stats': review_stats,
+        'difficulty_distribution': difficulty_distribution,
         'similar_courses': similar_courses,
         'ai_summary': CourseAISummary.objects.filter(course=course).first(),
     })
-
 def about(request):
     """Render the static about page."""
     return render(request, "about.html")
@@ -573,7 +558,6 @@ def course_lookup(request):
         for c in courses[:5]
     ]
     return JsonResponse({'results': results})
-
 @login_required
 def my_profile(request):
     username_error = None
@@ -630,8 +614,11 @@ def my_profile(request):
         review_user=request.user
     ).select_related('review_course', 'review_professor').order_by('-review_date', '-id')
 
+    paginator = Paginator(user_reviews, 5)
+    reviews = paginator.get_page(request.GET.get('page'))
+
     return render(request, 'my_profile.html', {
-        'reviews': user_reviews,
+        'reviews': reviews,
         'majors': all_majors,
         'username_error': username_error,
         'password_form': password_form,
@@ -697,8 +684,9 @@ def delete_review(request, review_id):
     review.delete()
     messages.success(request, "Your review has been deleted.")
     return redirect('my_profile')
+
 """review page showing all reviews"""
-def review_page(request):
+def home(request):
     query = request.GET.get('q', '').strip()
     sort_by = request.GET.get('sort', 'recent')
 
@@ -757,7 +745,7 @@ def review_page(request):
     paginator = Paginator(reviews, 10)
     page_obj = paginator.get_page(request.GET.get('page'))
 
-    return render(request, 'reviewpage.html', {
+    return render(request, 'home.html', {
         'reviews': page_obj,
         'query': query,
         'sort_by': sort_by,

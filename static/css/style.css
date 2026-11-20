@@ -6,7 +6,7 @@
     --uwm-light: #F5F5F5;
     --rating-score-1: #198754;
     --rating-score-2: #a8c957;
-    --rating-score-3: #ffc107;
+    --rating-score-3: #ffeb3b;
     --rating-score-4: #ed7b26;
     --rating-score-5: #dc3545;
 }
@@ -136,7 +136,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    border-right: 1px solid rgba(255, 255, 255, 0.75);
+    border-right: 1px solid var(--uwm-black);
     color: var(--uwm-black);
     font-weight: 700;
     line-height: 1;

@@ -111,6 +111,8 @@ def review(request):
             selected_tags = ReviewTag.objects.filter(pk__in=selected_tag_ids)
             new_review.review_tags.set(selected_tags)
 
+
+        messages.success(request, 'Review submitted!')
         return redirect('search')
 
     return render(request, 'review.html', {
@@ -880,3 +882,6 @@ def calculator(request):
 
 def privacy_policy(request):
     return render(request, 'privacy_policy.html')
+
+def faq(request):
+    return render(request, 'faq.html')

@@ -155,6 +155,19 @@
 
     <!-- Page Content -->
     <main class="flex-grow-1">
+
+        <!-- Green Alert / Messages Banner -->
+        {% if messages %}
+            <div class="container mt-3">
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags|default:'success' }} alert-dismissible fade show shadow-sm" role="alert">
+                        <i class="bi bi-check-circle-fill me-2"></i> {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
         {% block content %}
         {% endblock %}
     </main>
@@ -218,7 +231,7 @@
                         </li>
 
                         <li class="mb-2">
-                            <a href="#" class="text-secondary text-decoration-none">
+                            <a href="{% url 'faq' %}" class="text-secondary text-decoration-none">
                                 FAQ
                             </a>
                         </li>
